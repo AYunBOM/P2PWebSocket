@@ -18,7 +18,7 @@ server_socket.bind((host, port))
 server_socket.listen(4)  # 4개의 연결을 동시에 처리
 # server_file.write("서버가 {}:{}에서 실행 중입니다.\n".format(host, port))
 
-
+com = [1, 2 | 1, 3 | 1, 4 | 2, 3 | 2, 4 | 3, 4]
 # 시간을 출력 형식에 맞게 변환
 def real_time(time):
     minute = "{}".format(time // 60)
@@ -29,8 +29,39 @@ def real_time(time):
 
 
 
-def client_handler(client_socket):
-    global system_clock, result_sum, count
+def client_handler(client_socket, thread_num):
+    global row, col, matrix
+    
+    while 6:
+        if thread_num == 4:
+            #random = 0~5
+        while 100:
+            if thread_num in random:
+                while True:
+                    if thread_num == min(random):
+                        client_socket.send(1, row)
+                        r = client_socket.recv()
+                    else:
+                        client_socket.send(1, col)
+                        c = client_socket.recv()
+                    
+                    if matrix[r, c] == -1:
+                        row = r
+                        col = c
+                        break
+
+            else:
+                client_socket.send(0)
+
+                while True:
+                    if row, col not null:
+                        #2개 중에 선택해서 - lottery
+                            client_socket.send(row, col)
+                            client_socket.recv(result)
+                            break
+
+                matrix[r, c] = result 
+
 
     
 
@@ -39,6 +70,6 @@ def client_handler(client_socket):
 while True:
     client_socket, client_address = server_socket.accept()
     client_thread = threading.Thread(
-        target=client_handler, args=(client_socket)
+        target=client_handler, args=(client_socket, thread_num)
     )
     client_thread.start()

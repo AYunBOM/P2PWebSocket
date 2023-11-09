@@ -1,75 +1,83 @@
-# -*- coding: utf-8 -*-
-
 import socket
-import numpy as np
+import threading
+from queue import Queue
 import random
 
-# 서버 정보 설정
-server_host = "101.101.208.213"  # 서버의 IP 주소로 변경
-server_port = 8080  # 서버에서 설정한 포트 번호로 변경
+#클라이언트가 보내는 경우
+#- 서버에게 자신의 행렬 보내기
+#- 서버에게 연산 결과 보내기
+def Send(client_sock, send_queue):
 
+    while True:
+        try:
+            #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
+            recv = send_queue.get()
 
-# 시간을 출력 형식에 맞게 변환
-def real_time(time):
-    minute = "{}".format(time // 60)
-    second = "{}".format(time % 60)
-    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
-    # 예) 3초 => 00:03 / 100초 => 01:40
-    return result
+            thread_num, type, pair = recv.split()
 
-# 소켓 생성
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if type == 'matrix':
+                c_list = [0, 1, 2, 3]
+                pair = list(map(int, pair.split(",")))
+                complement = list(set(c_list) - set(pair)) #행렬을 받을 클라이언트 둘
 
-# 서버에 연결
-client_socket.connect((server_host, server_port))
+                recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
 
-# 클라이언트가 해야 할 거
-while True: 
-    matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기
-
-    answer = client_socket.recv(1024).decode("utf-8")
-    answer_split = answer.split(",")
-    
-    if answer_split[0]: # 만약 자신이 선택됐다면 (1이라면 선택 / 0이라면 선택X)
-        answer_dir = answer_split[1] # 자신이 행인지 열인지 확인 
-
-        if answer_dir == 'row': # 행이 걸렸다면   
-            while True:
-                random_dir = random.randint(0, 9) # 랜덤 행 고르기
-                row_send = ' '.join(str(i) for i in matrix[random_dir]) # 해당 행을 str로 변환
-                final_row_send = '|'.join([str(random_dir), row_send]) # 골라진 행 번호를 '|'로 구분하여 보냄
-                client_socket.send(final_row_send.encode("utf-8"))
-                check = client_socket.recv(1024).decode("utf-8") # 통과되면 1, 통과 안되면 0을 받음
-                if int(check): # 랜덤값 확인 받았으면 탈출
-                    break
+                if int(thread_num) == min(pair)+1:
+                    #행렬의 가로
+                    #msg = "matrix" + "행렬의 가로" + str(recv_client) + "row"
+                    client_sock.send(bytes(msg.encode()))
+                else:
+                    #행렬의 세로
+                    #msg = "matrix" + "행렬의 세로" + str(recv_client) + "col"
+                    client_sock.send(bytes(msg.encode()))
             
-        if answer_dir == 'col': # 열이 걸렸다면  
-            while True:
-                random_dir = random.randint(0, 9)
-                col_send = ' '.join(str(i) for i in matrix[:, random_dir]) # 해당 열을 str로 변환
-                final_col_send = '|'.join([str(random_dir), col_send]) # 골라진 열 번호를 '|'로 구분하여 보냄
-                client_socket.send(final_col_send.encode("utf-8"))
-                check = client_socket.recv(1024).decode("utf-8") # 통과되면 1, 통과 안되면 0을 받음
-                if int(check): # 랜덤값 확인 받았으면 탈출
-                    break
-            
-            client_socket.send(col_send.encode("utf-8")) # 해당 열 서버로 전송
-    
-    # 만약 선택받지 못했다면
-    else:
-        row_recv = client_socket.recv(1024).decode("utf-8") # 선택된 행 저장
-        col_recv = client_socket.recv(1024).decode("utf-8") # 선택된 열 저장
-        #system_clock = client_socket.recv(1024).decode("utf-8") # 시스템 클락 저장
+            elif type == 'calculating':
+                data, rc = pair.split()
 
-        row_recv_list = [int(i) for i in row_recv.split(' ')] # 행 리스트로 변환
-        col_recv_list = [int(i) for i in col_recv.split(' ')] # 열 리스트로 변환
+                if rc == "row":
+                    #가로에 저장
+                else:
+                    #세로에 저장
+                
+                if #가로 세로 행이 2개 다 들어왔으면:
+                    #연산
+                    #msg = "cal_result" + "연산결과" + 아무번호 + "행열번호"
+                    client_sock.send(bytes(msg.encode()))
 
-        result = sum(x * y for x, y in zip(row_recv_list, col_recv_list)) # 두 리스트를 인덱스별로 곱하고 더함 (행렬 곱)
+        except:
+            pass
 
-        #system_clock += 1 # 시스템 클락 1초 증가 (연산할 때마다 1초 증가시킴)
+
+#클라이언트가 받는 경우
+#- 처음 서버한테 자기가 행렬(가로, 세로)를 주는 아인지 받는 아인지 확인
+#- 행렬을 받음
+
+def Recv(client_sock, send_queue):
+    while True:
+        recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
+        print(recv_data)
         
-        res_send = str(result) #+ "," + str(system_clock) # 결과 값과 증가된 시스템 클락을 함께 보냄 (,으로 구분)
+        if recv_data.split()[1] == 'Client_all_connected':
+            msg = 'Start 1 0'
+            client_sock.send(bytes(msg.encode()))
 
-        client_socket.send(res_send.encode("utf-8")) 
+        else:
+            send_queue.put([recv_data])
 
-client_socket.close()
+#TCP Client
+if __name__ == '__main__':
+    send_queue = Queue()
+    client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
+    Host = 'localhost' #통신할 대상의 IP 주소
+    Port = 9000  #통신할 대상의 Port 주소
+    client_sock.connect((Host, Port)) #서버로 연결시도
+    print('Connecting to ', Host, Port)
+
+
+    #Client의 메시지를 보낼 쓰레드
+    thread1 = threading.Thread(target=Send, args=(client_sock, send_queue))
+    thread1.start()
+
+    #Server로 부터 다른 클라이언트의 메시지를 받을 쓰레드
+    thread2 = threading.Thread(target=Recv, args=(client_sock, send_queue))
+    thread2.start()

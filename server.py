@@ -1,6 +1,7 @@
 import socket
 import threading
 from queue import Queue
+import numpy as np
 import random
 
 # 서버가 보내는 경우
@@ -11,41 +12,44 @@ import random
 
 
 def Send(group, send_queue):
+    
     print('Thread Send Start')
+    
     while True:
-        s_client = []
         try:
-            #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             recv = send_queue.get()
+
+            #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             if recv == 'Group Changed':
-                print('Group Changed')
                 break
 
+            type, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
             
-            type, data, recv_client_num, rc = recv[0].split()
 
-            if type == "Start":
-                case = [[0,1], [0,2], [0,3], [1,2], [1,3], [2,3]]
-                for i in case:
+            if type == "Start": # 6개의 경우의 수 동시 연산
+                case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
+                for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
                     msg = str(recv[2]) + ' matrix ' + ','.join(i)
-                    for j in i:
-                        group[j].send(bytes(data.encode()))
+                    for j in i: # 메시지 전송
+                        group[j-1].send(bytes(data.encode()))
 
-            
-            elif type == "matrix":
-                recv_client = group[int(recv_client_num)]
 
-                msg = recv_client_num + " calculating " + data + " " + rc
-                
-                recv_client.send(bytes(msg.encode()))
+            elif type == "matrix": # 클라이언트에게 행렬을 받아왔다면
+                recv_client = group[int(recv_client_num)] # 연산을 해야하는 클라이언트에게 메시지 전송
+                msg = recv_client_num + " calculating " + pair_mul + data + " " + rc + rc_num #행번호 열번호 보내줘 보미 했던거 
+                recv_client.send(bytes(msg.encode())) #메시지 전송
 
             elif type == "cal_result":
-                #행렬에 넣기
-                #matrix[rc] = data
-            
-                
+                dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
+                idx = dic[pair_mul]
+                matrix[idx][rc][rc_num] = data # idx: case 인덱스, rc: 행, rc_num:열
+
+                    
         except:
             pass
+
+        for element in matrix:
+            print(element)
 
 
 # 서버가 받는 경우
@@ -66,6 +70,7 @@ def Recv(conn, count, send_queue, group):
 
 # TCP Echo Server
 if __name__ == '__main__':
+    
     send_queue = Queue()
     HOST = ''  # 수신 받을 모든 IP를 의미
     PORT = 9000  # 수신받을 Port
@@ -74,6 +79,7 @@ if __name__ == '__main__':
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
     count = 0
     group = [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
+    matrix = [np.full((10, 10), -1) for _ in range(6)]
     while True:
         count = count + 1
         conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기

@@ -16,78 +16,55 @@ system_clock 넣기
 로그 넣기
 """
 
+global case, matrix
 
 def Send(group, send_queue):
     
     print('Thread Send Start')
-
-    """
-    이 위에서 while 100번
-    while 100:
-        if go == 2:
-            다시 case별로 클라이언트에게 누가 행렬 보내는 아이인지 메시지로 알려주기
-        while True:
-    """
     
     while True:
-        try:
-            recv = send_queue.get()
+        for rnd in range(1,101): #round 100
+            print("round" + rnd + "(을)를 시작합니다.")
+            matrix = [np.full((10, 10), -1, dtype=int) for _ in range(6)] #matrix의 모든 원소를 -1로 채움
+            while 100: # round 하나당 연산 100번
+                try:
+                    recv = send_queue.get()
 
-            #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
-            if recv == 'Group Changed':
-                break
+                    #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
+                    if recv == 'Group Changed':
+                        break
 
-
-            type_name, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
-            print("type_name : " + type_name + "pair_mul : " + pair_mul + "data : " + data + "recv_client_num : " + recv_client_num + "rc : " + rc + "rc_num : " + rc_num)
-            
-
-            """ if type == "Start": # 6개의 경우의 수 동시 연산
-                case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
-                c_list = [1, 2, 3, 4]
-                for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
-                    complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
-                    recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
-
-                    msg = str(recv[2]) + ' matrix ' + ','.join(i) + str(recv_client)
-                    for j in i: # 메시지 전송
-                        print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
-                        group[j-1].send(bytes(msg.encode())) """
-
-
-            if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
-                recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
-                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num #행번호 열번호 보내줘 보미 했던거 
-                print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
-                recv_client.send(bytes(msg.encode())) #메시지 전송
-
-            elif type_name == "cal_result":
-                case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
-                dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
-                idx = dic[pair_mul]
-                matrix[idx][rc][rc_num] = data # idx: case 인덱스, rc: 행, rc_num:열
+                    type_name, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
+                    print("type_name : " + type_name + "pair_mul : " + pair_mul + "data : " + data + "recv_client_num : " + recv_client_num + "rc : " + rc + "rc_num : " + rc_num)
                 
-                #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
-                c_list = [1, 2, 3, 4]
-                complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
-                recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
+                    if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
+                        recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
+                        msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num #행번호 열번호 보내줘 보미 했던거 
+                        print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
+                        recv_client.send(bytes(msg.encode())) #메시지 전송
 
+                    elif type_name == "cal_result":
+                        case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
+                        dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
+                        idx = dic[pair_mul]
+                        matrix[idx][rc][rc_num] = data # idx: case 인덱스, rc: 행, rc_num:열
+                        
+                        #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
+                        c_list = [1, 2, 3, 4]
+                        complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
+                        recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
 
-                if -1 in matrix:
-                    msg = str(recv[2]) + ' matrix ' + ','.join(i) + str(recv_client)
-                    for j in case[idx]: # 메시지 전송
-                        print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
-                        group[j-1].send(bytes(msg.encode()))
+                        for arr in matrix:
+                            if -1 not in arr:
+                                print("round" + rnd + "(을)를 종료합니다.")
+                                break
+                            msg = str(recv[2]) + ' matrix ' + ','.join(idx) + str(recv_client)
+                            for j in case[idx]: # 메시지 전송
+                                print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                                group[j-1].send(bytes(msg.encode()))
 
-
-            """
-            if matrix 6개가 다 찬다면:
-                go = 2
-                break
-            """
-                    
-        except:
-            pass
+                except:
+                    pass
 
 
 

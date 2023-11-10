@@ -23,33 +23,50 @@ def Send(group, send_queue):
             if recv == 'Group Changed':
                 break
 
-            type, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
+            type_name, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
             
 
-            if type == "Start": # 6개의 경우의 수 동시 연산
+            """ if type == "Start": # 6개의 경우의 수 동시 연산
                 case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
+                c_list = [1, 2, 3, 4]
                 for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
-                    msg = str(recv[2]) + ' matrix ' + ','.join(i)
+                    complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
+                    recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
+
+                    msg = str(recv[2]) + ' matrix ' + ','.join(i) + str(recv_client)
                     for j in i: # 메시지 전송
-                        group[j-1].send(bytes(data.encode()))
+                        print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                        group[j-1].send(bytes(msg.encode())) """
 
 
-            elif type == "matrix": # 클라이언트에게 행렬을 받아왔다면
-                recv_client = group[int(recv_client_num)] # 연산을 해야하는 클라이언트에게 메시지 전송
+            if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
+                recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
                 msg = recv_client_num + " calculating " + pair_mul + data + " " + rc + rc_num #행번호 열번호 보내줘 보미 했던거 
+                print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
                 recv_client.send(bytes(msg.encode())) #메시지 전송
 
-            elif type == "cal_result":
+            elif type_name == "cal_result":
+                case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
                 dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
                 idx = dic[pair_mul]
                 matrix[idx][rc][rc_num] = data # idx: case 인덱스, rc: 행, rc_num:열
+                
+                #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
+                c_list = [1, 2, 3, 4]
+                complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
+                recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
 
+
+                if -1 in matrix:
+                    msg = str(recv[2]) + ' matrix ' + ','.join(i) + str(recv_client)
+                    for j in case[idx]: # 메시지 전송
+                        print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                        group[j-1].send(bytes(msg.encode()))
                     
         except:
             pass
 
-        for element in matrix:
-            print(element)
+
 
 
 # 서버가 받는 경우
@@ -59,12 +76,20 @@ def Send(group, send_queue):
 def Recv(conn, count, send_queue, group):
     print('Thread Recv' + str(count) + ' Start')
     if count == 4:
-        for conn in group:
-            msg = str(count) + ' Client_all_connected 0'
-            conn.send(bytes(msg.encode()))
+        case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
+        c_list = [1, 2, 3, 4]
+        for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
+            complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
+            recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
+
+            msg = str(0) + ' matrix ' + ','.join(map(str, i)) + " " +str(recv_client)
+            for j in i: # 메시지 전송
+                print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                group[j-1].send(bytes(msg.encode()))
 
     while True:
         data = conn.recv(1024).decode()
+        print(data)
         send_queue.put([data, conn, count]) #각각의 클라이언트의 메시지, 소켓정보, 쓰레드 번호를 send로 보냄
 
 

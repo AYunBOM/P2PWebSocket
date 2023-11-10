@@ -13,15 +13,17 @@ def Send(client_sock, send_queue):
         try:
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             recv = send_queue.get()
+            print("send로 왔음")
             
-            thread_num, type, pair = recv.split()
+            print("데이터 : ")
+            print(recv)
+            thread_num, type_name, pair, etc = recv.split()
+            print(type_name)
 
-            if type == 'matrix':
-                c_list = [1, 2, 3, 4]
+            if type_name == 'matrix':
+                print("matrix로 왔음")
                 pair = list(map(int, pair.split(",")))
-                complement = list(set(c_list) - set(pair)) #행렬을 받을 클라이언트 둘
-
-                recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
+                recv_client = etc
 
                 pair_mul = pair[0] * pair[1]
 
@@ -30,21 +32,24 @@ def Send(client_sock, send_queue):
                     random_row = random.randint(0, 9) # 아무 행이나 선택
                     #msg = "matrix" + "행렬의 가로" + str(recv_client) + "row" + 가로의 번호
                     msg = "matrix" + str(pair_mul) + str(matrix[random_row]) + str(recv_client) + "row" + str(random_row) # 수정필요할지도
+                    print("가로 행렬 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
                 else:
                     #행렬의 세로
                     random_col = random.randint(0, 9) # 아무 열이나 선택
                     #msg = "matrix" + "행렬의 세로" + str(recv_client) + "col" + 세로의 번호
                     msg = "matrix" + str(pair_mul) + str(matrix[:, random_col]) + str(recv_client) + "col" + str(random_col) # 수정필요
+                    print("세로 행렬 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
             
-            elif type == 'calculating':
-                pair_cal, data, rc, rc_num = pair.split()
+            elif type_name == 'calculating':
+                pair_cal = int(pair)
+                data, rc, rc_num = etc.split()
                 pair_check = []
                 pair_check.append(pair_cal) # (수정) [[2], [해당 가로나 세로]] 로 저장하자
                 if rc == "row": 
                     row = rc_num # (수정) 행번호 열번호 바뀔 것임 수정 필요
-                    cal_row = int(data) 
+                    cal_row = int(data)
                 else:
                     col = rc_num
                     cal_col = int(data)
@@ -53,6 +58,7 @@ def Send(client_sock, send_queue):
                     result = sum(x * y for x, y in zip(cal_row, cal_col))
                     msg = "cal_result" + str(result) + str(5) + str(row) + str(col)
                     pair_check = [x for x in pair_check if x != pair_cal]
+                    print("연산 완료. 연산 결과 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
         except:
             pass
@@ -67,12 +73,7 @@ def Recv(client_sock, send_queue):
         recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
         print(recv_data)
         
-        if recv_data.split()[1] == 'Client_all_connected':
-            msg = 'Start 0 0 0 0'
-            client_sock.send(bytes(msg.encode()))
-
-        else:
-            send_queue.put([recv_data])
+        send_queue.put([recv_data])
 
 #TCP Client
 if __name__ == '__main__':

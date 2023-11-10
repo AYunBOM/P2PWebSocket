@@ -8,12 +8,26 @@ import random
 #- 클라이언트 랜덤으로 선택해서 역할 정해주기
 #- 행렬 보내주기
 
-#1, 2 선택
+"""
+연산 하는거까지 끝나면
+while 100번
+lottery 짜기
+system_clock 넣기
+로그 넣기
+"""
 
 
 def Send(group, send_queue):
     
     print('Thread Send Start')
+
+    """
+    이 위에서 while 100번
+    while 100:
+        if go == 2:
+            다시 case별로 클라이언트에게 누가 행렬 보내는 아이인지 메시지로 알려주기
+        while True:
+    """
     
     while True:
         try:
@@ -64,6 +78,13 @@ def Send(group, send_queue):
                     for j in case[idx]: # 메시지 전송
                         print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
                         group[j-1].send(bytes(msg.encode()))
+
+
+            """
+            if matrix 6개가 다 찬다면:
+                go = 2
+                break
+            """
                     
         except:
             pass

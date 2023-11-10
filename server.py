@@ -23,7 +23,9 @@ def Send(group, send_queue):
             if recv == 'Group Changed':
                 break
 
+
             type_name, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
+            print("type_name : " + type_name + "pair_mul : " + pair_mul + "data : " + data + "recv_client_num : " + recv_client_num + "rc : " + rc + "rc_num : " + rc_num)
             
 
             """ if type == "Start": # 6개의 경우의 수 동시 연산
@@ -41,7 +43,7 @@ def Send(group, send_queue):
 
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
-                msg = recv_client_num + " calculating " + pair_mul + data + " " + rc + rc_num #행번호 열번호 보내줘 보미 했던거 
+                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num #행번호 열번호 보내줘 보미 했던거 
                 print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
                 recv_client.send(bytes(msg.encode())) #메시지 전송
 
@@ -82,14 +84,15 @@ def Recv(conn, count, send_queue, group):
             complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
             recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
 
-            msg = str(0) + ' matrix ' + ','.join(map(str, i)) + " " +str(recv_client)
+            add_msg = ' matrix ' + ','.join(map(str, i)) + " " +str(recv_client)
             for j in i: # 메시지 전송
                 print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                msg = str(j) + add_msg
                 group[j-1].send(bytes(msg.encode()))
+                msg = add_msg
 
     while True:
         data = conn.recv(1024).decode()
-        print(data)
         send_queue.put([data, conn, count]) #각각의 클라이언트의 메시지, 소켓정보, 쓰레드 번호를 send로 보냄
 
 

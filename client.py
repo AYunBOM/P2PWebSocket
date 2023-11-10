@@ -18,7 +18,9 @@ def Send(client_sock, send_queue):
             print("데이터 : ")
             print(recv)
             thread_num, type_name, pair, etc = recv.split()
+            print("흠")
             print(type_name)
+            
 
             if type_name == 'matrix':
                 print("matrix로 왔음")

@@ -16,10 +16,25 @@ lottery 짜기
 system_clock 넣기
 로그 넣기
 """
+server_file = open("server_log.txt", "w", encoding="UTF-8")
 
+system_clock = 0  # 서버 0~600초 누적시간
+system_clock_formating = ""  # 누적시간 형태 변환할 문자열
+round = 1
+
+# 시간을 출력 형식에 맞게 변환
+def real_time(time):
+    minute = "{}".format(time // 60)
+    second = "{}".format(time % 60)
+    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
+    # 예) 3초 => 00:03 / 100초 => 01:40
+    return result
+
+
+system_clock_formating = real_time(system_clock)
 
 def Send(group, send_queue):
-    
+    global round
     print('Thread Send Start')
 
     """
@@ -33,6 +48,7 @@ def Send(group, send_queue):
     matrix_counting = 0
 
     while True:
+
         try:
             recv = send_queue.get()
 
@@ -59,6 +75,7 @@ def Send(group, send_queue):
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 print("행렬에 연산결과 저장됨")
+                server_file.write("{} [server] '클라이언트 {}'의 연산결과 '{}' 값이 matrix[{},{}] 에 저장되었습니다.\n".format(system_clock_formating, recv_client_num, data, rc, rc_num))
                 #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
                 c_list = [1, 2, 3, 4]
                 complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
@@ -85,7 +102,12 @@ def Send(group, send_queue):
                     matrix_counting += 1
                     print(matrix_counting)
                     if matrix_counting == 6:
-                        break
+                        server_file.write("라운드 {} 연산 완료".format(round))
+                        print("라운드 " + str(round) + " 연산 완료") # 이건 로그에 안찍힘 왤까
+                        round += 1
+                        print(round)
+                        if round > 2:
+                            break
 
 
             """

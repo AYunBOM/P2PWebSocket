@@ -7,12 +7,31 @@ import time
 
 
 
-
 #클라이언트가 보내는 경우
 #- 서버에게 자신의 행렬 보내기
 #- 서버에게 연산 결과 보내기
+
+#client_file = open("client{}_log.txt".format(클라이언트 번호), "w", encoding="UTF-8")
+
+
+system_clock = 0  # 서버 0~600초 누적시간
+system_clock_formating = ""  # 누적시간 형태 변환할 문자열
+
+# 시간을 출력 형식에 맞게 변환
+def real_time(time):
+    minute = "{}".format(time // 60)
+    second = "{}".format(time % 60)
+    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
+    # 예) 3초 => 00:03 / 100초 => 01:40
+    return result
+
+
+system_clock_formating = real_time(system_clock)
+
+
 def Send(client_sock, send_queue):
     global pair_check, data_row, data_col
+
     while True:
         try:
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
@@ -35,6 +54,7 @@ def Send(client_sock, send_queue):
                     mtx = ",".join(map(str, matrix[random_row]))
                     msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " row " + str(random_row) # 수정필요할지도
                     print("가로 행렬 서버에게 보냄")
+                    #client_file.write("{} [client {}] 서버에게 가로 행렬 {} 을 보냈습니다.\n".format(system_clock_formating, thread_num, mtx))
                     client_sock.send(bytes(msg.encode()))
                 else:
                     time.sleep(0.005)
@@ -44,6 +64,7 @@ def Send(client_sock, send_queue):
                     mtx = ",".join(map(str, matrix[:, random_col]))
                     msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_col) # 수정필요
                     print("세로 행렬 서버에게 보냄")
+                    #client_file.write("{} [client {}] 서버에게 세로 행렬 {} 을 보냈습니다.\n".format(system_clock_formating, thread_num, mtx))
                     client_sock.send(bytes(msg.encode()))
             
             elif type_name == 'calculating':
@@ -82,9 +103,11 @@ def Send(client_sock, send_queue):
                             data_col.pop(y)
                         else:
                             y += 1
+                    #client_file.write("{} [Client {}] 서버에게서 받은 행과 열을 연산합니다.\n".format(system_clock_formating, thread_num))
                     result = sum(x * y for x, y in zip(cal_row, cal_col))
                     msg = "cal_result " + str(pair_cal) + " " + str(result) + " " + thread_num + " " + str(cal_row_dir) + " " + str(cal_col_dir)
                     pair_check = [x for x in pair_check if x != pair_cal]
+                    #client_file.write("{} [Client {}] 서버에게 연산결과 '{}' (을)를 전송합니다.\n".format(system_clock_formating, thread_num, result))
 
                     client_sock.send(bytes(msg.encode()))
         except:
@@ -114,7 +137,6 @@ if __name__ == '__main__':
     matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
     pair_check, data_row, data_col = [], [], [] # 짝만 맞출 리스트, data를 저장해놓을 리스트
 
-
     #Client의 메시지를 보낼 쓰레드
     thread1 = threading.Thread(target=Send, args=(client_sock, send_queue))
     thread1.start()
@@ -122,3 +144,4 @@ if __name__ == '__main__':
     #Server로 부터 다른 클라이언트의 메시지를 받을 쓰레드
     thread2 = threading.Thread(target=Recv, args=(client_sock, send_queue))
     thread2.start()
+

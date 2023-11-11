@@ -3,6 +3,7 @@ import threading
 from queue import Queue
 import numpy as np
 import random
+import time
 
 # 서버가 보내는 경우
 #- 클라이언트 랜덤으로 선택해서 역할 정해주기
@@ -30,7 +31,7 @@ def Send(group, send_queue):
     """
 
     matrix_counting = 0
-    
+
     while True:
         try:
             recv = send_queue.get()
@@ -42,20 +43,20 @@ def Send(group, send_queue):
 
             type_name, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
             
+            
 
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
+                time.sleep(0.02)
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
                 msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num #행번호 열번호 보내줘 보미 했던거 
                 print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
                 recv_client.send(bytes(msg.encode())) #메시지 전송
 
             elif type_name == "cal_result":
+                time.sleep(0.01)
                 case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
-                print("0번 까지 잘 됨")
                 dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
-                print("1번 까지 잘 됨")
                 idx = dic[pair_mul]
-                print("2번 까지 잘 됨")
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 print("행렬에 연산결과 저장됨")
                 #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
@@ -63,8 +64,14 @@ def Send(group, send_queue):
                 complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
                 recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
 
+                complete = 1
 
-                if -1 in matrix[idx]:
+                for m_row in matrix[idx]:
+                    if -1 in m_row:
+                        complete = 0
+                        break
+                
+                if complete == 0:
                     add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " +str(recv_client)
                     for j in case[idx]: # 메시지 전송
                         print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
@@ -131,7 +138,7 @@ if __name__ == '__main__':
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
     count = 0
     group = [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
-    matrix = [np.full((10, 10), -1) for _ in range(6)]
+    matrix = np.full((6, 10, 10), -1)
     while True:
         count = count + 1
         conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기

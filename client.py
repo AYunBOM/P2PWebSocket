@@ -4,20 +4,20 @@ from queue import Queue
 import random
 import numpy as np
 
-global pair_check, data_row, data_col
-pair_check = []; data_row = []; data_col = [] # 짝만 맞출 리스트, data를 저장해놓을 리스트
+
+
 
 #클라이언트가 보내는 경우
 #- 서버에게 자신의 행렬 보내기
 #- 서버에게 연산 결과 보내기
 def Send(client_sock, send_queue):
-    
+    global pair_check, data_row, data_col
     while True:
         try:
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             recv = send_queue.get()
             print("send로 왔음")
-
+    
             thread_num, type_name, pair, etc = recv[0].split()
 
             if type_name == 'matrix':
@@ -50,7 +50,9 @@ def Send(client_sock, send_queue):
                 data, rc, rc_num = etc.split("|") # 연산할 행이나 열, 행인지 열인지, 자신이 가진 행이나 열의 번호
                 
                 data = list(map(int, data.split(","))) # ,로 구분해서 나눈 다음 리스트로 만들기
+                
                 pair_check.append(pair_cal) # pair_cal 저장 [2]
+                
                 
                 # 왜 row랑 col 리스트를 나눴냐면 나중에 연산하고 값을 넘겨줄 때 자신이 행인지 열인지 알 수 없어 그래서 구분했음
                 if rc == "row":
@@ -62,7 +64,8 @@ def Send(client_sock, send_queue):
 
                 if pair_check.count(pair_cal) == 2: # 가로 세로 행이 2개 다 들어왔으면
                     print("둘 다 받음")
-                    x, y = 0 # pop할 위치 정할 변수들
+                    x, y = 0, 0 # pop할 위치 정할 변수들
+                    print("1번 까지 잘 됨")
                     for i in data_row: # 해당 pair_mul을 가지고 있는 data_row와 data_col 속 데이터 추출
                         if i[0] == pair_cal:
                             cal_row_dir = i[1]
@@ -70,6 +73,7 @@ def Send(client_sock, send_queue):
                             data_row.pop(x)
                         else:
                             x += 1
+                    print("2번 까지 잘 됨")
                     for j in data_col:
                         if j[0] == pair_cal:
                             cal_col_dir = j[1]
@@ -77,9 +81,10 @@ def Send(client_sock, send_queue):
                             data_col.pop(y)
                         else:
                             y += 1
+                    print("3번 까지 잘 됨")
                     print(cal_row, cal_col)
                     result = sum(x * y for x, y in zip(cal_row, cal_col))
-                    msg = "cal_result " + str(result) + " " + str(5) + " " + str(cal_row_dir) + " " + str(cal_col_dir)
+                    msg = "cal_result " + str(pair_cal) + " " + str(result) + " " + thread_num + " " + str(cal_row_dir) + " " + str(cal_col_dir)
                     pair_check = [x for x in pair_check if x != pair_cal]
                     print("연산 완료. 연산 결과 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
@@ -108,6 +113,7 @@ if __name__ == '__main__':
     print('Connecting to ', Host, Port)
 
     matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
+    pair_check, data_row, data_col = [], [], [] # 짝만 맞출 리스트, data를 저장해놓을 리스트
 
 
     #Client의 메시지를 보낼 쓰레드

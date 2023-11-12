@@ -21,9 +21,9 @@ def Send(client_sock, send_queue):
             thread_num, type_name, pair, etc = recv[0].split()
 
             if type_name == 'matrix':
-                time.sleep(0.01)
+                time.sleep(0.02)
                 pair = list(map(int, pair.split(",")))
-                recv_client = etc
+                recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
 
                 pair_mul = pair[0] * pair[1]
 
@@ -33,7 +33,7 @@ def Send(client_sock, send_queue):
                     random_row = random.randint(0, 9) # 아무 행이나 선택
                     #msg = "matrix" + "행렬의 가로" + str(recv_client) + "row" + 가로의 번호
                     mtx = ",".join(map(str, matrix[random_row]))
-                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " row " + str(random_row) # 수정필요할지도
+                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " row " + str(random_row) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket # 수정필요할지도
                     print("가로 행렬 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
                 else:
@@ -42,15 +42,15 @@ def Send(client_sock, send_queue):
                     random_col = random.randint(0, 9) # 아무 열이나 선택
                     #msg = "matrix" + "행렬의 세로" + str(recv_client) + "col" + 세로의 번호
                     mtx = ",".join(map(str, matrix[:, random_col]))
-                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_col) # 수정필요
+                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_col) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket # 수정필요
                     print("세로 행렬 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
             
             elif type_name == 'calculating':
-                time.sleep(0.02)
+                time.sleep(0.03)
                 print("연산함")
                 pair_cal = int(pair) # 연산할 클라이언트 번호 곱 계산 했던거
-                data, rc, rc_num = etc.split("|") # 연산할 행이나 열, 행인지 열인지, 자신이 가진 행이나 열의 번호
+                data, rc, rc_num, recv_client_ticket_t, not_recv_client_t, not_recv_client_ticket_t = etc.split("|") # 연산할 행이나 열, 행인지 열인지, 자신이 가진 행이나 열의 번호
                 
                 data = list(map(int, data.split(","))) # ,로 구분해서 나눈 다음 리스트로 만들기
                 
@@ -83,7 +83,7 @@ def Send(client_sock, send_queue):
                         else:
                             y += 1
                     result = sum(x * y for x, y in zip(cal_row, cal_col))
-                    msg = "cal_result " + str(pair_cal) + " " + str(result) + " " + thread_num + " " + str(cal_row_dir) + " " + str(cal_col_dir)
+                    msg = "cal_result " + str(pair_cal) + " " + str(result) + " " + thread_num + " " + str(cal_row_dir) + " " + str(cal_col_dir)+ " " + recv_client_ticket_t + "|" + not_recv_client_t + "|" + not_recv_client_ticket_t
                     pair_check = [x for x in pair_check if x != pair_cal]
 
                     client_sock.send(bytes(msg.encode()))

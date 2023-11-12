@@ -16,25 +16,10 @@ lottery 짜기
 system_clock 넣기
 로그 넣기
 """
-server_file = open("server_log.txt", "w", encoding="UTF-8")
 
-system_clock = 0  # 서버 0~600초 누적시간
-system_clock_formating = ""  # 누적시간 형태 변환할 문자열
-round = 1
-
-# 시간을 출력 형식에 맞게 변환
-def real_time(time):
-    minute = "{}".format(time // 60)
-    second = "{}".format(time % 60)
-    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
-    # 예) 3초 => 00:03 / 100초 => 01:40
-    return result
-
-
-system_clock_formating = real_time(system_clock)
 
 def Send(group, send_queue):
-    global pair_check, data_row, data_col, case, dic, result_matrix
+    
     print('Thread Send Start')
 
     """
@@ -46,10 +31,8 @@ def Send(group, send_queue):
     """
 
     matrix_counting = 0
-    matrix = np.full((6, 10, 10), -1)
 
     while True:
-
         try:
             recv = send_queue.get()
 
@@ -64,65 +47,18 @@ def Send(group, send_queue):
 
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
                 time.sleep(0.02)
-                # 연산을 해도 되는지 확인
-                pair_cal = int(pair_mul)
-                idx = dic[pair_mul]
-
-                pair_check.append(pair_cal) # pair_mul 저장 [2]
-                data_save = data # data로 넘어온 랜덤 행을 리스트로 저장
-
-                if rc == "row":
-                    time.sleep(0.009)
-                    data_row.append([pair_cal, int(rc_num), data_save]) # [2, 6, [1, 2, 3, 4, 5]] 데이터 저장
-                else:
-                    time.sleep(0.012)
-                    data_col.append([pair_cal, int(rc_num), data_save]) # [2, 6, [1, 2, 3, 4, 5]] 데이터 저장
-
-                if pair_check.count(pair_cal) == 2:
-                    x, y = 0, 0 # pop할 위치 정할 변수들
-                    for i in data_row: # 해당 pair_mul을 가지고 있는 data_row와 data_col 속 데이터 추출
-                        if i[0] == pair_cal:
-                            cal_row_dir = i[1] # 연산해야 할 행 번호
-                            cal_row = i[2] # 연산해야 할 행
-                            data_row.pop(x) 
-                        else:
-                            x += 1
-                    for j in data_col:
-                        if j[0] == pair_cal:
-                            cal_col_dir = j[1]
-                            cal_col = j[2]
-                            data_col.pop(y)
-                        else:
-                            y += 1
-
-                    pair_check = [x for x in pair_check if x != pair_cal]
-
-                    if matrix[idx][cal_row_dir][cal_col_dir] == -1:
-                        time.sleep(0.009)
-                        recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
-                        msg = recv_client_num + " calculating " + pair_mul + " " + str(cal_row_dir) + "|" + cal_row + "|" + str(cal_col_dir) + "|" + cal_col #행번호 열번호 보내줘 보미 했던거 
-                        print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
-                        recv_client.send(bytes(msg.encode())) #메시지 전송
-
-                    else:
-                        time.sleep(0.15)
-                        add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " +str(recv_client)
-                        for j in case[idx]: # 메시지 전송
-                            time.sleep(0.24)
-                            print("클라이언트" + str(j) + "에게 행렬을 다시 보내달라 말함")
-                            msg = str(j) + add_msg
-                            group[j-1].send(bytes(msg.encode()))
-                            msg = add_msg
-
-                    
-                    
+                recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
+                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num #행번호 열번호 보내줘 보미 했던거 
+                print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
+                recv_client.send(bytes(msg.encode())) #메시지 전송
 
             elif type_name == "cal_result":
-                time.sleep(0.06)
+                time.sleep(0.01)
+                case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
+                dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 print("행렬에 연산결과 저장됨")
-                server_file.write("{} [server] '클라이언트 {}'의 연산결과 '{}' 값이 matrix[{},{}] 에 저장되었습니다.\n".format(system_clock_formating, recv_client_num, data, rc, rc_num))
                 #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
                 c_list = [1, 2, 3, 4]
                 complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
@@ -136,10 +72,8 @@ def Send(group, send_queue):
                         break
                 
                 if complete == 0:
-                    time.sleep(0.1)
                     add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " +str(recv_client)
                     for j in case[idx]: # 메시지 전송
-                        time.sleep(0.15)
                         print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
                         msg = str(j) + add_msg
                         group[j-1].send(bytes(msg.encode()))
@@ -153,12 +87,17 @@ def Send(group, send_queue):
                     if matrix_counting == 6:
                         break
 
+
+            """
+            if matrix 6개가 다 찬다면:
+                go = 2
+                break
+            """
                     
         except:
             pass
 
     print("모든 행렬 연산 완료")
-    result_matrix.append(matrix)
 
 
 
@@ -199,11 +138,7 @@ if __name__ == '__main__':
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
     count = 0
     group = [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
-    
-    pair_check, data_row, data_col, result_matrix = [], [], [], [] # 짝만 맞출 리스트, data를 저장해놓을 리스트
-    case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
-    dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
-
+    matrix = np.full((6, 10, 10), -1)
     while True:
         count = count + 1
         conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기

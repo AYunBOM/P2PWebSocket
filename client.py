@@ -96,9 +96,15 @@ def Send(client_sock, send_queue):
 #- 행렬을 받음
 
 def Recv(client_sock, send_queue):
+    global client_file
     while True:
         recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
         
+        if recv_data.split()[0] == 'first_connected':
+            i = recv_data.split()[1]
+            file_name = "client" + str(i) + "_log.txt"
+            client_file.append(open(file_name, "w", encoding="UTF-8"))
+
         
         send_queue.put([recv_data])
 
@@ -112,7 +118,7 @@ if __name__ == '__main__':
     print('Connecting to ', Host, Port)
 
     matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
-    pair_check, data_row, data_col = [], [], [] # 짝만 맞출 리스트, data를 저장해놓을 리스트
+    pair_check, data_row, data_col, client_file = [], [], [], [] # 짝만 맞출 리스트, data를 저장해놓을 리스트
 
 
     #Client의 메시지를 보낼 쓰레드

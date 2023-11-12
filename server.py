@@ -19,18 +19,16 @@ system_clock 넣기
 
 
 def Send(group, send_queue):
+    global result_matrix
     
     print('Thread Send Start')
 
-    """
-    이 위에서 while 100번
-    while 100:
-        if go == 2:
-            다시 case별로 클라이언트에게 누가 행렬 보내는 아이인지 메시지로 알려주기
-        while True:
-    """
+    msg = "first_connected " + str(len(group))
+    group[-1].send(bytes(msg.encode()))
 
+    
     matrix_counting = 0
+    matrix = np.full((6, 10, 10), -1)
 
     while True:
         try:
@@ -88,16 +86,12 @@ def Send(group, send_queue):
                         break
 
 
-            """
-            if matrix 6개가 다 찬다면:
-                go = 2
-                break
-            """
                     
         except:
             pass
 
     print("모든 행렬 연산 완료")
+    result_matrix.append(matrix)
 
 
 
@@ -137,8 +131,11 @@ if __name__ == '__main__':
     server_sock.bind((HOST, PORT))  # 소켓에 수신받을 IP주소와 PORT를 설정
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
     count = 0
-    group = [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
-    matrix = np.full((6, 10, 10), -1)
+    group, result_matrix = [], [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
+    
+
+    server_file = open("server_log.txt", "w", encoding="UTF-8")
+
     while True:
         count = count + 1
         conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기

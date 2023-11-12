@@ -18,11 +18,11 @@ system_clock 넣기
 """
 
 def recv_client_choice_lottery(ticket_list1, client_num1, ticket_list2, client_num2):
-    choice_ticket = random.choice(ticket_list1 + ticket_list2)
+    choice_ticket = random.choice(ticket_list1 + ticket_list2) # client1이 가지고있는 티켓 [1, 2, 3, 4]와 client2가 가지고있는 티켓 [5, 6, 7, 8]중에 하나 선택
     
-    if choice_ticket in ticket_list1:
-        ticket_list1.remove(choice_ticket)
-        return (client_num1, ticket_list1, client_num2, ticket_list2)
+    if choice_ticket in ticket_list1: # 선택한 티켓이 누가 가진 티켓인지 검사
+        ticket_list1.remove(choice_ticket) #뽑혔던 티켓 없애기
+        return (client_num1, ticket_list1, client_num2, ticket_list2) 
     else:
         ticket_list2.remove(choice_ticket)
         return (client_num2, ticket_list2, client_num1, ticket_list1)
@@ -71,15 +71,19 @@ def Send(group, send_queue):
                 recv_client_t = recv_client_num
                 recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")                
                 
+                # 연산할 클라이언트 2명이 가지고 있는 티켓 리스트로
                 recv_client_ticket = list(map(int, recv_client_ticket.split(",")))
                 not_recv_client_ticket = list(map(int, not_recv_client_ticket.split(",")))
 
+                # 클라이언트 2명 중 한명 선택
                 recv_client_t, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(recv_client_ticket, int(recv_client_t), not_recv_client_ticket, int(not_recv_client))
 
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 print("행렬에 연산결과 저장됨")
 
+
+                # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
                 print(case[idx], len(recv_client_ticket), len(not_recv_client_ticket))
                 
                 
@@ -91,11 +95,12 @@ def Send(group, send_queue):
                         break
                 
                 if complete == 0:
+                    #Recv에 있던거랑 똑같음
                     add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " + str(recv_client_t) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
                     for j in case[idx]: # 메시지 전송
                         print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
                         msg = str(j) + add_msg
-                        group[j-1].send(bytes(msg.encode()))
+                        group[j-1].send(bytes(msg.encode())) #group에는 들어온 클라이언트가 하나씩 순서대로 쌓여있기때문에 인덱스로 골라서 send
                         msg = add_msg
                 
                 else:
@@ -123,18 +128,19 @@ def Send(group, send_queue):
 
 def Recv(conn, count, send_queue, group):
     print('Thread Recv' + str(count) + ' Start')
-    if count == 4:
+    if count == 4: #처음 클라이언트 4명이 다 들어오면 실행
         case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
         c_list = [1, 2, 3, 4]
 
         for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
-            ticket_list1 = [ i for i in range(50)]
+            ticket_list1 = [ i for i in range(50)] #각 경우의 수 마다 연산할 클라이언트에게 티켓 주기
             ticket_list2 = [ i for i in range(50, 100)]
             complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
             
-            #행렬을 받을 클라이언트 랜덤으로 선택
+            #행렬을 받을 클라이언트 랜덤으로 선택 ( 선택된 클라이언트 번호, 선택된 클라이언트가 가진 티켓, 선택되지않은 클라이언트 번호, 선택되지않은 클라이언트가 가진 티켓 )
             recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(ticket_list1, complement[0], ticket_list2, complement[1])
             
+            #나중에 티켓정보가 필요하기 때문에 메시지 주고받을때 계속해서 붙여줌
             add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
             for j in i: # 메시지 전송
                 time.sleep(0.01)

@@ -11,10 +11,14 @@ import time
 #- 서버에게 자신의 행렬 보내기
 #- 서버에게 연산 결과 보내기
 def Send(client_sock, send_queue):
-    global pair_check, data_row, data_col
+    global pair_check, data_row, data_col, done
     while True:
         try:
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
+            if done == 1:
+                print("헉")
+                break
+
             recv = send_queue.get()
     
             thread_num, type_name, pair, etc = recv[0].split()
@@ -85,14 +89,14 @@ def Send(client_sock, send_queue):
                     client_sock.send(bytes(msg.encode()))
         except:
             pass
-
+    client_sock.close()
 
 #클라이언트가 받는 경우
 #- 처음 서버한테 자기가 행렬(가로, 세로)를 주는 아인지 받는 아인지 확인
 #- 행렬을 받음
 
 def Recv(client_sock, send_queue):
-    global client_file, matrix
+    global client_file, matrix, done
     while True:
         try:
             recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
@@ -105,14 +109,17 @@ def Recv(client_sock, send_queue):
             elif recv_data.split()[0] == 'make_new_matrix':
                 matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
 
-            """ elif recv_data.split()[0] == 'round_over':
+            elif recv_data.split()[0] == 'round_over':
                 print("접속 종료")
-                break """
+                done = 1
+                break
 
             send_queue.put([recv_data])
         except:
             exit(0)
-    #client_sock.close()
+    print("악")
+    send_queue.put("1")
+    client_sock.close()
     
 
 #TCP Client
@@ -123,6 +130,7 @@ if __name__ == '__main__':
     Port = 9000  #통신할 대상의 Port 주소
     client_sock.connect((Host, Port)) #서버로 연결시도
     print('Connecting to ', Host, Port)
+    done = 0
 
     matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
     pair_check, data_row, data_col, client_file = [], [], [], [] # 짝만 맞출 리스트, data를 저장해놓을 리스트

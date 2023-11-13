@@ -45,7 +45,7 @@ def empty_check(idx, matrix):
     return random_mat
 
 def Send(group, send_queue):
-    global result_matrix, matrix, case, dic, c_list
+    global result_matrix, matrix, case, dic, c_list, result_matrix_count
     
     print('Thread Send Start')
 
@@ -54,7 +54,6 @@ def Send(group, send_queue):
 
     matrix_counting = 0
 
-    result_matrix_count = 0
 
     while True:
         try:
@@ -150,12 +149,10 @@ def Send(group, send_queue):
 
                         if result_matrix_count == 1:
                             print(result_matrix)
-                            """ msg = "round_over"
+                            msg = "round_over"
                             for con in group:
-                                con.send(bytes(msg.encode())) """
-                            for client_conn in group:
-                                client_conn.close()
-                            server_sock.close()
+                                con.send(bytes(msg.encode()))
+                            #server_sock.close()
                             print("100번 연산 완료")
                             print("접속 종료")
                             break
@@ -191,13 +188,19 @@ def Send(group, send_queue):
                         
         except:
             pass
+
+    if result_matrix_count == 1:
+        print("아")
+        server_sock.close()
+        
+
     
 # 서버가 받는 경우
 #- 행렬 받기
 #- 연산결과 받기
 
 def Recv(conn, count, send_queue, group):
-    global case, dic, c_list
+    global case, dic, c_list, result_matrix_count
 
     matrix = np.full((6, 10, 10), -1)
 
@@ -226,9 +229,15 @@ def Recv(conn, count, send_queue, group):
                 msg = add_msg
 
     while True:
+        
+        if result_matrix_count == 1:
+            print("잉")
+            break
+
         data = conn.recv(1024).decode()
         send_queue.put([data, conn, count]) #각각의 클라이언트의 메시지, 소켓정보, 쓰레드 번호를 send로 보냄
-
+    
+    server_sock.close()
 
 # TCP Echo Server
 if __name__ == '__main__':
@@ -239,7 +248,7 @@ if __name__ == '__main__':
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP Socket
     server_sock.bind((HOST, PORT))  # 소켓에 수신받을 IP주소와 PORT를 설정
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
-    count = 0
+    count, result_matrix_count = 0, 0
     group, result_matrix = [], [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
     case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
     c_list = [1, 2, 3, 4]
@@ -271,5 +280,9 @@ if __name__ == '__main__':
             #소켓에 연결된 각각의 클라이언트의 메시지를 받을 쓰레드
             thread2 = threading.Thread(target=Recv, args=(conn, count, send_queue, group))
             thread2.start()
+
+            
         except:
             exit(0)
+    
+    

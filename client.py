@@ -92,17 +92,28 @@ def Send(client_sock, send_queue):
 #- 행렬을 받음
 
 def Recv(client_sock, send_queue):
-    global client_file
+    global client_file, matrix
     while True:
-        recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
-        
-        if recv_data.split()[0] == 'first_connected':
-            i = recv_data.split()[1]
-            file_name = "client" + str(i) + "_log.txt"
-            client_file.append(open(file_name, "w", encoding="UTF-8"))
+        try:
+            recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
+            
+            if recv_data.split()[0] == 'first_connected':
+                i = recv_data.split()[1]
+                file_name = "client" + str(i) + "_log.txt"
+                client_file.append(open(file_name, "w", encoding="UTF-8"))
 
-        
-        send_queue.put([recv_data])
+            elif recv_data.split()[0] == 'make_new_matrix':
+                matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
+
+            """ elif recv_data.split()[0] == 'round_over':
+                print("접속 종료")
+                break """
+
+            send_queue.put([recv_data])
+        except:
+            exit(0)
+    #client_sock.close()
+    
 
 #TCP Client
 if __name__ == '__main__':
@@ -124,3 +135,6 @@ if __name__ == '__main__':
     #Server로 부터 다른 클라이언트의 메시지를 받을 쓰레드
     thread2 = threading.Thread(target=Recv, args=(client_sock, send_queue))
     thread2.start()
+    
+    
+    

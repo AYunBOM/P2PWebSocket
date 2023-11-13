@@ -52,9 +52,7 @@ def Send(group, send_queue):
     msg = "first_connected " + str(len(group))
     group[-1].send(bytes(msg.encode()))
 
-    
     matrix_counting = 0
-    
 
     result_matrix_count = 0
 
@@ -83,7 +81,6 @@ def Send(group, send_queue):
                 recv_client_t = recv_client_num
                 
                 recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
-
 
                 if recv_client_ticket == "[]" and not_recv_client_ticket == "[]":
                     recv_client_ticket = []
@@ -147,22 +144,30 @@ def Send(group, send_queue):
                     matrix_counting += 1
                     print(matrix_counting)
 
-                    
-
-                    if result_matrix_count == 5:
-                        print(result_matrix)
-                        print("100번 연산 완료")
-                        break
-
                     if matrix_counting == 6:
                         result_matrix_count += 1
-                        print(matrix)
-                        print("모든 행렬 연산 완료")
                         result_matrix.append(matrix)
+
+                        if result_matrix_count == 1:
+                            print(result_matrix)
+                            """ msg = "round_over"
+                            for con in group:
+                                con.send(bytes(msg.encode())) """
+                            for client_conn in group:
+                                client_conn.close()
+                            server_sock.close()
+                            print("100번 연산 완료")
+                            print("접속 종료")
+                            break
+                        #print(matrix)
+
+                        print("모든 행렬 연산 완료")
                         print("넣기")
+                        msg = "make_new_matrix"
+                        for con in group:
+                            con.send(bytes(msg.encode()))
                         matrix = np.full((6, 10, 10), -1)
                         matrix_counting = 0
-
                         for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
                             ticket_list1 = [ i for i in range(50)] #각 경우의 수 마다 연산할 클라이언트에게 티켓 주기
                             ticket_list2 = [ i for i in range(50, 100)]
@@ -184,15 +189,9 @@ def Send(group, send_queue):
                                 group[j-1].send(bytes(msg.encode()))
                                 msg = add_msg
                         
-          
         except:
             pass
-
     
-
-
-
-
 # 서버가 받는 경우
 #- 행렬 받기
 #- 연산결과 받기
@@ -250,24 +249,27 @@ if __name__ == '__main__':
     server_file = open("server_log.txt", "w", encoding="UTF-8")
 
     while True:
-        count = count + 1
-        conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기
-        group.append(conn) #연결된 클라이언트의 소켓정보
-        print('Connected ' + str(addr))
+        try:
+            count = count + 1
+            conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기
+            group.append(conn) #연결된 클라이언트의 소켓정보
+            print('Connected ' + str(addr))
 
 
-        #소켓에 연결된 모든 클라이언트에게 동일한 메시지를 보내기 위한 쓰레드(브로드캐스트)
-        #연결된 클라이언트가 1명 이상일 경우 변경된 group 리스트로 반영
+            #소켓에 연결된 모든 클라이언트에게 동일한 메시지를 보내기 위한 쓰레드(브로드캐스트)
+            #연결된 클라이언트가 1명 이상일 경우 변경된 group 리스트로 반영
 
-        if count > 1:
-            send_queue.put('Group Changed')
-            thread1 = threading.Thread(target=Send, args=(group, send_queue,))
-            thread1.start()
-            pass
-        else:
-            thread1 = threading.Thread(target=Send, args=(group, send_queue,))
-            thread1.start()
+            if count > 1:
+                send_queue.put('Group Changed')
+                thread1 = threading.Thread(target=Send, args=(group, send_queue,))
+                thread1.start()
+                pass
+            else:
+                thread1 = threading.Thread(target=Send, args=(group, send_queue,))
+                thread1.start()
 
-        #소켓에 연결된 각각의 클라이언트의 메시지를 받을 쓰레드
-        thread2 = threading.Thread(target=Recv, args=(conn, count, send_queue, group))
-        thread2.start()
+            #소켓에 연결된 각각의 클라이언트의 메시지를 받을 쓰레드
+            thread2 = threading.Thread(target=Recv, args=(conn, count, send_queue, group))
+            thread2.start()
+        except:
+            exit(0)

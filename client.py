@@ -18,11 +18,11 @@ def Send(client_sock, send_queue):
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             recv = send_queue.get()
     
-            thread_num, type_name, pair, etc = recv[0].split()
+            thread_num, random_dir, type_name, pair, etc = recv[0].split()
 
             if type_name == 'matrix':
                 time.sleep(0.02)
-                pair = list(map(int, pair.split(",")))
+                pair = list(map(int, pair.split(","))) # [1, 2]
                 recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
 
                 pair_mul = pair[0] * pair[1]
@@ -30,19 +30,15 @@ def Send(client_sock, send_queue):
                 if int(thread_num) == min(pair):
                     time.sleep(0.008)
                     #행렬의 가로
-                    random_row = random.randint(0, 9) # 아무 행이나 선택
-                    #msg = "matrix" + "행렬의 가로" + str(recv_client) + "row" + 가로의 번호
-                    mtx = ",".join(map(str, matrix[random_row]))
-                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " row " + str(random_row) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket # 수정필요할지도
+                    mtx = ",".join(map(str, matrix[int(random_dir)]))
+                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " row " + str(random_dir) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket
                     print("가로 행렬 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
                 else:
                     time.sleep(0.005)
                     #행렬의 세로
-                    random_col = random.randint(0, 9) # 아무 열이나 선택
-                    #msg = "matrix" + "행렬의 세로" + str(recv_client) + "col" + 세로의 번호
-                    mtx = ",".join(map(str, matrix[:, random_col]))
-                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_col) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket # 수정필요
+                    mtx = ",".join(map(str, matrix[:, int(random_dir)]))
+                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_dir) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket 
                     print("세로 행렬 서버에게 보냄")
                     client_sock.send(bytes(msg.encode()))
             

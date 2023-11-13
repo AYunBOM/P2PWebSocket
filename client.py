@@ -116,11 +116,9 @@ def Recv(client_sock, send_queue):
             send_queue.put([recv_data])
         except:
             exit(0)
-    print("악")
     send_queue.put("1")
     client_sock.close()
     
-
 #TCP Client
 if __name__ == '__main__':
     send_queue = Queue()
@@ -142,6 +140,3 @@ if __name__ == '__main__':
     #Server로 부터 다른 클라이언트의 메시지를 받을 쓰레드
     thread2 = threading.Thread(target=Recv, args=(client_sock, send_queue))
     thread2.start()
-    
-    
-    

@@ -70,7 +70,7 @@ def Send(group, send_queue):
                 time.sleep(0.03)
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
                 msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num + "|" + etc
-                #print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
+                print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
                 recv_client.send(bytes(msg.encode())) #메시지 전송
 
             elif type_name == "cal_result":
@@ -104,7 +104,7 @@ def Send(group, send_queue):
 
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
-                #print("행렬에 연산결과 저장됨")
+                print("행렬에 연산결과 저장됨")
 
 
                 # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
@@ -133,7 +133,7 @@ def Send(group, send_queue):
                     random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
                     add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " + str(recv_client_t) + "|" + str_recv_client_ticket + "|" + str(not_recv_client) + "|" + str_not_recv_client_ticket
                     for j, m in zip(case[idx], random_mat): # 메시지 전송
-                        #print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                        print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
                         msg = str(j) + "=" + str(m) + " " + add_msg
                         group[j-1].send(bytes(msg.encode())) #group에는 들어온 클라이언트가 하나씩 순서대로 쌓여있기때문에 인덱스로 골라서 send
                         msg = add_msg
@@ -147,7 +147,7 @@ def Send(group, send_queue):
                         result_matrix_count += 1
                         result_matrix.append(matrix)
 
-                        if result_matrix_count == 1:
+                        if result_matrix_count == 100:
                             print(result_matrix)
                             msg = "round_over"
                             for con in group:
@@ -181,7 +181,7 @@ def Send(group, send_queue):
                             for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
                                 time.sleep(0.01)
                                 # 여기서 빈 공간(-1)을 좌표로 모아서 해당 클라이언트에게 보냄
-                                #print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                                print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
                                 msg = str(j) + "=" + str(m) + " " + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
                                 group[j-1].send(bytes(msg.encode()))
                                 msg = add_msg
@@ -189,8 +189,7 @@ def Send(group, send_queue):
         except:
             pass
 
-    if result_matrix_count == 1:
-        print("아")
+    if result_matrix_count == 100:
         server_sock.close()
         
 
@@ -223,15 +222,14 @@ def Recv(conn, count, send_queue, group):
             for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
                 time.sleep(0.01)
                 # 여기서 빈 공간(-1)을 좌표로 모아서 해당 클라이언트에게 보냄
-                #print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
                 msg = str(j) + "=" + str(m) + " " + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
                 group[j-1].send(bytes(msg.encode()))
                 msg = add_msg
 
     while True:
         
-        if result_matrix_count == 1:
-            print("잉")
+        if result_matrix_count == 100:
             break
 
         data = conn.recv(1024).decode()

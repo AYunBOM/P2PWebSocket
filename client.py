@@ -16,7 +16,6 @@ def Send(client_sock, send_queue):
         try:
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             if done == 1:
-                print("헉")
                 break
 
             recv = send_queue.get()

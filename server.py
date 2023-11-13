@@ -20,6 +20,10 @@ system_clock 넣기
 
 
 def recv_client_choice_lottery(ticket_list1, client_num1, ticket_list2, client_num2):
+
+    if len(ticket_list1) == 0 and len(ticket_list2) == 0:
+        return (-1, -1, -1, -1)
+
     choice_ticket = random.choice(ticket_list1 + ticket_list2) # client1이 가지고있는 티켓 [1, 2, 3, 4]와 client2가 가지고있는 티켓 [5, 6, 7, 8]중에 하나 선택
     
     if choice_ticket in ticket_list1: # 선택한 티켓이 누가 가진 티켓인지 검사
@@ -29,15 +33,15 @@ def recv_client_choice_lottery(ticket_list1, client_num1, ticket_list2, client_n
         ticket_list2.remove(choice_ticket)
         return (client_num2, ticket_list2, client_num1, ticket_list1)
 
-def empty_check(idx):
-    global matrix
+def empty_check(idx, matrix):
     empty_space = [] 
     for m in range(0, 10):
         for n in range(0, 10):
             if matrix[idx][m][n] == -1:
                 empty_space.append([m, n])
-    random_dir = random.randint(0, len(empty_space)-1) # 랜덤으로 한 좌표 정함
-    random_mat = empty_space[random_dir] # 좌표 저장
+    
+    random_mat = random.choice(empty_space)
+
     return random_mat
 
 def Send(group, send_queue):
@@ -75,11 +79,27 @@ def Send(group, send_queue):
 
                 #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
                 recv_client_t = recv_client_num
-                recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")                
+                print(etc)
+                recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
+
+
+                if recv_client_ticket == "[]" and not_recv_client_ticket == "[]":
+                    recv_client_ticket = []
+                    not_recv_client_ticket = []
                 
-                # 연산할 클라이언트 2명이 가지고 있는 티켓 리스트로
-                recv_client_ticket = list(map(int, recv_client_ticket.split(",")))
-                not_recv_client_ticket = list(map(int, not_recv_client_ticket.split(",")))
+                elif recv_client_ticket == "[]" or not_recv_client_ticket == "[]":
+                    if recv_client_ticket == "[]":
+                        recv_client_ticket = []
+                        not_recv_client_ticket = list(map(int, not_recv_client_ticket.split(",")))
+                    if not_recv_client_ticket == "[]":
+                        not_recv_client_ticket = []
+                        recv_client_ticket = list(map(int, recv_client_ticket.split(",")))
+                
+                else:
+                    # 연산할 클라이언트 2명이 가지고 있는 티켓 리스트로
+                    recv_client_ticket = list(map(int, recv_client_ticket.split(",")))
+                    not_recv_client_ticket = list(map(int, not_recv_client_ticket.split(",")))
+                
 
                 # 클라이언트 2명 중 한명 선택
                 recv_client_t, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(recv_client_ticket, int(recv_client_t), not_recv_client_ticket, int(not_recv_client))
@@ -90,7 +110,7 @@ def Send(group, send_queue):
 
 
                 # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
-                print(case[idx], len(recv_client_ticket), len(not_recv_client_ticket))
+       
                 
                 complete = 1
 
@@ -101,11 +121,22 @@ def Send(group, send_queue):
                 
                 if complete == 0:
                     #Recv에 있던거랑 똑같음
-                    random_mat = empty_check(idx) # 랜덤 빈 좌표
-                    add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " + str(recv_client_t) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
+                    if len(recv_client_ticket) == 0:
+                        str_recv_client_ticket = "[]"
+                    else:
+                        str_recv_client_ticket = ','.join(map(str, recv_client_ticket))
+
+                    if len(not_recv_client_ticket) == 0:
+                        str_not_recv_client_ticket = "[]"
+                    else:
+                        str_not_recv_client_ticket = ','.join(map(str, not_recv_client_ticket))
+
+                    
+                    random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
+                    add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " + str(recv_client_t) + "|" + str_recv_client_ticket + "|" + str(not_recv_client) + "|" + str_not_recv_client_ticket
                     for j, m in zip(case[idx], random_mat): # 메시지 전송
                         print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
-                        msg = str(j) + " " + str(m) + add_msg
+                        msg = str(j) + "=" + str(m) + " " + add_msg
                         group[j-1].send(bytes(msg.encode())) #group에는 들어온 클라이언트가 하나씩 순서대로 쌓여있기때문에 인덱스로 골라서 send
                         msg = add_msg
                 
@@ -115,13 +146,14 @@ def Send(group, send_queue):
                     matrix_counting += 1
                     print(matrix_counting)
                     if matrix_counting == 6:
+                        print("모든 행렬 연산 완료")
+                        result_matrix.append(matrix)
                         break
           
         except:
             pass
 
-    print("모든 행렬 연산 완료")
-    result_matrix.append(matrix)
+    
 
 
 
@@ -132,6 +164,8 @@ def Send(group, send_queue):
 
 def Recv(conn, count, send_queue, group):
     global case, dic
+
+    matrix = np.full((6, 10, 10), -1)
 
     print('Thread Recv' + str(count) + ' Start')
     if count == 4: #처음 클라이언트 4명이 다 들어오면 실행
@@ -146,7 +180,7 @@ def Recv(conn, count, send_queue, group):
             #행렬을 받을 클라이언트 랜덤으로 선택 ( 선택된 클라이언트 번호, 선택된 클라이언트가 가진 티켓, 선택되지않은 클라이언트 번호, 선택되지않은 클라이언트가 가진 티켓 )
             recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(ticket_list1, complement[0], ticket_list2, complement[1])
             
-            random_mat = empty_check(idx) # 랜덤 빈 좌표
+            random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
             
             #나중에 티켓정보가 필요하기 때문에 메시지 주고받을때 계속해서 붙여줌
             add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
@@ -154,7 +188,7 @@ def Recv(conn, count, send_queue, group):
                 time.sleep(0.01)
                 # 여기서 빈 공간(-1)을 좌표로 모아서 해당 클라이언트에게 보냄
                 print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
-                msg = str(j) + " " + str(m) + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
+                msg = str(j) + "=" + str(m) + " " + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
                 group[j-1].send(bytes(msg.encode()))
                 msg = add_msg
 

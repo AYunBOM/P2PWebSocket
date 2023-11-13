@@ -1,7 +1,6 @@
 import socket
 import threading
 from queue import Queue
-import random
 import numpy as np
 import time
 
@@ -18,10 +17,11 @@ def Send(client_sock, send_queue):
             #새롭게 추가된 클라이언트가 있을 경우 Send 쓰레드를 새롭게 만들기 위해 루프를 빠져나감
             recv = send_queue.get()
     
-            thread_num, random_dir, type_name, pair, etc = recv[0].split()
+            thread_num, type_name, pair, etc = recv[0].split()
 
             if type_name == 'matrix':
                 time.sleep(0.02)
+                thread_num, random_dir = thread_num.split("=")
                 pair = list(map(int, pair.split(","))) # [1, 2]
                 recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
 

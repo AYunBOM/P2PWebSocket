@@ -5,30 +5,50 @@ import numpy as np
 import random
 import time
 
-# 서버가 보내는 경우
-#- 클라이언트 랜덤으로 선택해서 역할 정해주기
-#- 행렬 보내주기
+system_clock = 0  # 서버 0~600초 누적시간
+system_clock_formating = ""  # 누적시간 형태 변환할 문자열
 
-"""
-연산 하는거까지 끝나면
-while 100번
-lottery 짜기
-system_clock 넣기
-로그 넣기
-"""
+# 시간을 출력 형식에 맞게 변환
+def real_time(time):
+    minute = "{}".format(time // 60)
+    second = "{}".format(time % 60)
+    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
+    # 예) 3초 => 00:03 / 100초 => 01:40
+    return result
 
+
+def recv_client_choice_lottery(ticket_list1, client_num1, ticket_list2, client_num2):
+
+    if len(ticket_list1) == 0 and len(ticket_list2) == 0:
+        return (-1, -1, -1, -1)
+
+    choice_ticket = random.choice(ticket_list1 + ticket_list2) # client1이 가지고있는 티켓 [1, 2, 3, 4]와 client2가 가지고있는 티켓 [5, 6, 7, 8]중에 하나 선택
+    
+    if choice_ticket in ticket_list1: # 선택한 티켓이 누가 가진 티켓인지 검사
+        ticket_list1.remove(choice_ticket) # 뽑혔던 티켓 없애기
+        return (client_num1, ticket_list1, client_num2, ticket_list2) 
+    else:
+        ticket_list2.remove(choice_ticket) # 두 번째로 선택된 클라이언트에 대하여 위와 똑같이 실행
+        return (client_num2, ticket_list2, client_num1, ticket_list1)
+
+def empty_check(idx, matrix):
+    empty_space = [] 
+    for m in range(0, 10):
+        for n in range(0, 10):
+            if matrix[idx][m][n] == -1:
+                empty_space.append([m, n])
+    
+    random_mat = random.choice(empty_space)
+
+    return random_mat
 
 def Send(group, send_queue):
-    global result_matrix
+    global result_matrix_count, result_matrix, matrix, case, dic, c_list, system_clock_formating, system_clock
     
-    print('Thread Send Start')
-
     msg = "first_connected " + str(len(group))
     group[-1].send(bytes(msg.encode()))
 
-    
     matrix_counting = 0
-    matrix = np.full((6, 10, 10), -1)
 
     while True:
         try:
@@ -38,30 +58,56 @@ def Send(group, send_queue):
             if recv == 'Group Changed':
                 break
 
-
-            type_name, pair_mul, data, recv_client_num, rc, rc_num = recv[0].split()
+            type_name, pair_mul, data, recv_client_num, rc, rc_num, etc = recv[0].split()
             
-            
-
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
-                time.sleep(0.02)
+                time.sleep(0.03)
+                if rc == "row":
+                    server_file.write("{} [server] '클라이언트 {}' 에게 '행'의 정보를 전달받았습니다.\n".format(system_clock_formating))
+                    server_file.write("전달받은 행 정보: {}\n".format(data))
+                elif rc == "col":
+                    server_file.write("{} [server] '클라이언트 {}' 에게 '열'의 정보를 전달받았습니다.\n".format(system_clock_formating))
+                    server_file.write("전달받은 열 정보: {}\n".format(data))
+
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
-                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num #행번호 열번호 보내줘 보미 했던거 
-                print("클라이언트" + recv_client_num + "에게 행렬" + rc + "보냄")
+                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num + "|" + etc
                 recv_client.send(bytes(msg.encode())) #메시지 전송
 
             elif type_name == "cal_result":
-                time.sleep(0.01)
-                case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
-                dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
+                time.sleep(0.02)
+
+                #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
+                recv_client_t = recv_client_num
+                
+                recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
+
+                if recv_client_ticket == "[]" and not_recv_client_ticket == "[]":
+                    recv_client_ticket = []
+                    not_recv_client_ticket = []
+                
+                elif recv_client_ticket == "[]" or not_recv_client_ticket == "[]":
+                    if recv_client_ticket == "[]":
+                        recv_client_ticket = []
+                        not_recv_client_ticket = list(map(int, not_recv_client_ticket.split(",")))
+                    if not_recv_client_ticket == "[]":
+                        not_recv_client_ticket = []
+                        recv_client_ticket = list(map(int, recv_client_ticket.split(",")))
+                
+                else:
+                    # 연산할 클라이언트 2명이 가지고 있는 티켓 리스트로
+                    recv_client_ticket = list(map(int, recv_client_ticket.split(",")))
+                    not_recv_client_ticket = list(map(int, not_recv_client_ticket.split(",")))
+                
+
+                # 클라이언트 2명 중 한명 선택
+                recv_client_t, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(recv_client_ticket, int(recv_client_t), not_recv_client_ticket, int(not_recv_client))
+
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
-                print("행렬에 연산결과 저장됨")
-                #다시 행렬을 받을 (연산역할) 클라이언트를 랜덤으로 선정
-                c_list = [1, 2, 3, 4]
-                complement = list(set(c_list) - set(case[idx])) #행렬을 받을 클라이언트 둘
-                recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
-
+                #system_clock += 1
+                server_file.write("{} [server] '클라이언트 {}' 에게 전달받은 연산 결과 '{}'(을)를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating,recv_client_num, data, rc, rc_num ))
+                # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
+                
                 complete = 1
 
                 for m_row in matrix[idx]:
@@ -70,56 +116,122 @@ def Send(group, send_queue):
                         break
                 
                 if complete == 0:
-                    add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " +str(recv_client)
-                    for j in case[idx]: # 메시지 전송
-                        print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
-                        msg = str(j) + add_msg
-                        group[j-1].send(bytes(msg.encode()))
+                    #Recv에 있던거랑 똑같음
+                    if len(recv_client_ticket) == 0:
+                        str_recv_client_ticket = "[]"
+                    else:
+                        str_recv_client_ticket = ','.join(map(str, recv_client_ticket))
+
+                    if len(not_recv_client_ticket) == 0:
+                        str_not_recv_client_ticket = "[]"
+                    else:
+                        str_not_recv_client_ticket = ','.join(map(str, not_recv_client_ticket))
+
+                    
+                    random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
+                    add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " + str(recv_client_t) + "|" + str_recv_client_ticket + "|" + str(not_recv_client) + "|" + str_not_recv_client_ticket
+                    for j, m in zip(case[idx], random_mat): # 메시지 전송
+                        msg = str(j) + "=" + str(m) + " " + add_msg
+                        group[j-1].send(bytes(msg.encode())) #group에는 들어온 클라이언트가 하나씩 순서대로 쌓여있기때문에 인덱스로 골라서 send
                         msg = add_msg
                 
                 else:
-                    print("행렬 하나 완성")
-                    print(matrix)
                     matrix_counting += 1
-                    print(matrix_counting)
+
                     if matrix_counting == 6:
-                        break
+                        for i,m in zip(range(1,7), matrix):
+                            print("Round {} Matrix {}\n".format(result_matrix_count, i))
+                            print(*matrix, sep="\n")
+                        server_file.write("{} [server] '라운드 {}' 의 연산이 완료되었습니다.\n".format(system_clock_formating, result_matrix_count))
+                        result_matrix_count += 1
+                        result_matrix.append(matrix)
 
+                        if result_matrix_count == 2:
+                            print(result_matrix)
+                            msg = "round_over"
+                            for con in group:
+                                con.send(bytes(msg.encode()))
+                            #server_sock.close()
+                            print("100번 연산 완료")
+                            print("접속 종료")
+                            break
+                        #print(matrix)
 
-                    
+                        server_file.write("{} [server] '라운드 {}' 의 연산을 시작합니다.\n".format(system_clock_formating, result_matrix_count))
+                        msg = "make_new_matrix"
+                        for con in group:
+                            con.send(bytes(msg.encode()))
+                        matrix = np.full((6, 10, 10), -1)
+                        matrix_counting = 0
+                        for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
+                            ticket_list1 = [ i for i in range(50)] #각 경우의 수 마다 연산할 클라이언트에게 티켓 주기
+                            ticket_list2 = [ i for i in range(50, 100)]
+                            complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
+                            pair_mul = i[0] * i[1] # 결과 행렬 구분할 변수
+                            idx = dic[str(pair_mul)]
+                            #행렬을 받을 클라이언트 랜덤으로 선택 ( 선택된 클라이언트 번호, 선택된 클라이언트가 가진 티켓, 선택되지않은 클라이언트 번호, 선택되지않은 클라이언트가 가진 티켓 )
+                            recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(ticket_list1, complement[0], ticket_list2, complement[1])
+                            
+                            random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
+                            
+                            #나중에 티켓정보가 필요하기 때문에 메시지 주고받을때 계속해서 붙여줌
+                            add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
+                            for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
+                                time.sleep(0.01)
+                                # 여기서 빈 공간(-1)을 좌표로 모아서 해당 클라이언트에게 보냄
+                                #print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
+                                msg = str(j) + "=" + str(m) + " " + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
+                                group[j-1].send(bytes(msg.encode()))
+                                msg = add_msg
+                        
         except:
             pass
 
-    print("모든 행렬 연산 완료")
-    result_matrix.append(matrix)
+    if result_matrix_count == 2:
+        server_sock.close()
+        
 
-
-
-
+    
 # 서버가 받는 경우
 #- 행렬 받기
 #- 연산결과 받기
 
 def Recv(conn, count, send_queue, group):
-    print('Thread Recv' + str(count) + ' Start')
-    if count == 4:
-        case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
-        c_list = [1, 2, 3, 4]
-        for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
-            complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
-            recv_client = random.choice(complement) #행렬을 받을 클라이언트 랜덤으로 선택
+    global case, dic, c_list, result_matrix_count
 
-            add_msg = ' matrix ' + ','.join(map(str, i)) + " " +str(recv_client)
-            for j in i: # 메시지 전송
-                print("클라이언트" + str(j) + "에게 행렬을 보내달라 말함")
-                msg = str(j) + add_msg
-                group[j-1].send(bytes(msg.encode()))
+    matrix = np.full((6, 10, 10), -1)
+    print(1)
+    
+    if count == 4: #처음 클라이언트 4명이 다 들어오면 실행
+        server_file.write("{} [server] '라운드 {}' 의 연산을 시작합니다.\n".format(system_clock_formating, result_matrix_count))
+        for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
+            ticket_list1 = [ i for i in range(50)] #각 경우의 수 마다 연산할 클라이언트에게 티켓 주기
+            ticket_list2 = [ i for i in range(50, 100)]
+            complement = list(set(c_list) - set(i)) #행렬을 받을 클라이언트 둘
+            pair_mul = i[0] * i[1] # 결과 행렬 구분할 변수
+            idx = dic[str(pair_mul)]
+            #행렬을 받을 클라이언트 랜덤으로 선택 ( 선택된 클라이언트 번호, 선택된 클라이언트가 가진 티켓, 선택되지않은 클라이언트 번호, 선택되지않은 클라이언트가 가진 티켓 )
+            recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = recv_client_choice_lottery(ticket_list1, complement[0], ticket_list2, complement[1])
+            
+            random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
+            
+            #나중에 티켓정보가 필요하기 때문에 메시지 주고받을때 계속해서 붙여줌
+            add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
+            for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
+                time.sleep(0.01)
+                msg = str(j) + "=" + str(m) + " " + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
+                group[j-1].send(bytes(msg.encode())) #클라이언트에게 행/열 전송 요청
                 msg = add_msg
 
     while True:
+        
+        if result_matrix_count == 2: 
+            break
+
         data = conn.recv(1024).decode()
         send_queue.put([data, conn, count]) #각각의 클라이언트의 메시지, 소켓정보, 쓰레드 번호를 send로 보냄
-
+    
+    server_sock.close()
 
 # TCP Echo Server
 if __name__ == '__main__':
@@ -130,31 +242,47 @@ if __name__ == '__main__':
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP Socket
     server_sock.bind((HOST, PORT))  # 소켓에 수신받을 IP주소와 PORT를 설정
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
-    count = 0
+    count, result_matrix_count = 0, 1
     group, result_matrix = [], [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
-    
+    case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
+    c_list = [1, 2, 3, 4]
+    dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
+    matrix = np.full((6, 10, 10), -1)
+
+    system_clock_formating = real_time(system_clock)
 
     server_file = open("server_log.txt", "w", encoding="UTF-8")
 
+    server_file.write("{} [server] 10x10 행렬을 6개 생성합니다.\n".format(system_clock_formating))
+    
+    for i, m in zip(range(1,7),matrix):
+        server_file.write("matrix {}\n {}\n".format(i, m))
+
     while True:
-        count = count + 1
-        conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기
-        group.append(conn) #연결된 클라이언트의 소켓정보
-        print('Connected ' + str(addr))
+        try:
+            count = count + 1
+            conn, addr = server_sock.accept()  # 해당 소켓을 열고 대기
+            group.append(conn) #연결된 클라이언트의 소켓정보
+            print('Connected ' + str(addr))
 
+            server_file.write("{} [server] '클라이언트' (이)가 접속하였습니다.\n".format(system_clock_formating))
 
-        #소켓에 연결된 모든 클라이언트에게 동일한 메시지를 보내기 위한 쓰레드(브로드캐스트)
-        #연결된 클라이언트가 1명 이상일 경우 변경된 group 리스트로 반영
+            #소켓에 연결된 모든 클라이언트에게 동일한 메시지를 보내기 위한 쓰레드(브로드캐스트)
+            #연결된 클라이언트가 1명 이상일 경우 변경된 group 리스트로 반영
 
-        if count > 1:
-            send_queue.put('Group Changed')
-            thread1 = threading.Thread(target=Send, args=(group, send_queue,))
-            thread1.start()
-            pass
-        else:
-            thread1 = threading.Thread(target=Send, args=(group, send_queue,))
-            thread1.start()
+            if count > 1:
+                send_queue.put('Group Changed')
+                thread1 = threading.Thread(target=Send, args=(group, send_queue,))
+                thread1.start()
+                pass
+            else:
+                thread1 = threading.Thread(target=Send, args=(group, send_queue,))
+                thread1.start()
 
-        #소켓에 연결된 각각의 클라이언트의 메시지를 받을 쓰레드
-        thread2 = threading.Thread(target=Recv, args=(conn, count, send_queue, group))
-        thread2.start()
+            #소켓에 연결된 각각의 클라이언트의 메시지를 받을 쓰레드
+            thread2 = threading.Thread(target=Recv, args=(conn, count, send_queue, group))
+            thread2.start()
+
+            
+        except:
+            exit(0)

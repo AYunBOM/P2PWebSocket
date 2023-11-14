@@ -44,7 +44,7 @@ def empty_check(idx, matrix):
 
 def Send(group, send_queue):
     global result_matrix_count, result_matrix, matrix, case, dic, c_list, system_clock_formating, system_clock
-    msg = "first_connected " + str(len(group))
+    msg = "first_connected " + str(len(group)) + " " + str(result_matrix_count)
     group[-1].send(bytes(msg.encode()))
 
     matrix_counting = 0
@@ -60,9 +60,9 @@ def Send(group, send_queue):
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
                 time.sleep(0.03)
                 if rc == "row":
-                    server_file.write("{} [server] 클라이언트 {}에게 '행'의 정보를 전달받았습니다.\n".format(system_clock_formating, recv_client_num))
+                    server_file.write("{} [server] 클라이언트 {}에게 '행'의 정보를 전달합니다.\n".format(system_clock_formating, recv_client_num))
                 elif rc == "col":
-                    server_file.write("{} [server] 클라이언트 {}에게 '열'의 정보를 전달받았습니다.\n".format(system_clock_formating, recv_client_num))
+                    server_file.write("{} [server] 클라이언트 {}에게 '열'의 정보를 전달합니다.\n".format(system_clock_formating, recv_client_num))
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
                 msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num + "|" + etc
                 recv_client.send(bytes(msg.encode())) #메시지 전송
@@ -135,18 +135,18 @@ def Send(group, send_queue):
                     print(matrix_counting)
 
                     if matrix_counting == 6:
-                        server_file.write("{} [server] '라운드 {}' 의 연산이 완료되었습니다.\n".format(system_clock_formating, result_matrix_count))
+                        server_file.write("{} [server] '라운드 {}' 완료\n".format(system_clock_formating, result_matrix_count))
                         
-                        msg = "round_pass "
+                        msg = "round_pass " + str(recv_client_num) + " " + str(result_matrix_count)
                         for con in group:
                             con.send(bytes(msg.encode()))
 
                         result_matrix_count += 1
                         result_matrix.append(matrix)
 
-                        if result_matrix_count == 3:
+                        if result_matrix_count == 2:
                             print(result_matrix)
-                            msg = "round_over "
+                            msg = "round_over " + str(recv_client_num) + " " + str(result_matrix_count)
                             for con in group:
                                 con.send(bytes(msg.encode()))
 
@@ -156,10 +156,11 @@ def Send(group, send_queue):
                             for i,mtx in zip(range(1,3),result_matrix):
                                 for j, m in zip(range(1,7),mtx):
                                     server_file.write("Round {} matrix {}\n {}\n".format(i, j, m))
+                                server_file.write("\n")
                             break
 
-                        server_file.write("{} [server] '라운드 {}' 의 연산을 시작합니다.\n".format(system_clock_formating, result_matrix_count))
-                        msg_t = "make_new_matrix "
+                        server_file.write("{} [server] '라운드 {}' 시작\n".format(system_clock_formating, result_matrix_count))
+                        msg_t = "make_new_matrix " + str(recv_client_num) + " " + str(result_matrix_count)
                         for k, con in enumerate(group):
                             msg = msg_t + str(k)
                             con.send(bytes(msg.encode()))
@@ -190,7 +191,7 @@ def Send(group, send_queue):
         except:
             pass
 
-    if result_matrix_count == 3:
+    if result_matrix_count == 2:
         server_sock.close()
         
 
@@ -205,7 +206,7 @@ def Recv(conn, count, send_queue, group):
     matrix = np.full((6, 10, 10), -1)
     
     if count == 4: #처음 클라이언트 4명이 다 들어오면 실행        print(5)
-        server_file.write("{} [server] '라운드 {}' 의 연산을 시작합니다.\n".format(system_clock_formating, result_matrix_count))
+        server_file.write("{} [server] '라운드 {}' 시작\n".format(system_clock_formating, result_matrix_count))
         for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송
             ticket_list1 = [ i for i in range(50)] #각 경우의 수 마다 연산할 클라이언트에게 티켓 주기
             ticket_list2 = [ i for i in range(50, 100)]
@@ -221,14 +222,14 @@ def Recv(conn, count, send_queue, group):
             add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
             for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
                 time.sleep(0.01)
-                msg = str(j) + "=" + str(m) + " " + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
+                msg = str(j) + "=" + str(m) + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
                 group[j-1].send(bytes(msg.encode())) #클라이언트에게 행/열 전송 요청
                 msg = add_msg
 
 
     while True:
         
-        if result_matrix_count == 3: 
+        if result_matrix_count == 2: 
             break
 
         data = conn.recv(1024).decode()
@@ -260,6 +261,7 @@ if __name__ == '__main__':
     
     for i, m in zip(range(1,7),matrix):
         server_file.write("matrix {}\n {}\n".format(i, m))
+    server_file.write("\n")
 
     while True:
         try:

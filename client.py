@@ -26,7 +26,7 @@ def Send(client_sock, send_queue):
                 break
 
             recv = send_queue.get()
-
+            print(recv)
             thread_num, type_name, pair, etc = recv[0].split()
 
             if type_name == 'matrix':
@@ -118,36 +118,43 @@ def Recv(client_sock, send_queue):
     while True:
         try:
             recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
-            if recv_data.split()[0] == 'first_connected':
-                i = int(recv_data.split()[1])
-                file_name = "client" + str(i) + "_log.txt"
+            type_name, idx, rnd = recv_data.split()[0], recv_data.split()[1], recv_data.split()[2]
+            
+            print(recv_data)
+            if type_name == 'first_connected':
+                idx = int(idx)
+                file_name = "client" + str(idx) + "_log.txt"
                 client_file = open(file_name, "w", encoding="UTF-8")
-                client_file.write("{} [client {}] 서버에 연결되었습니다.\n".format(system_clock_formating, i))
-                client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, i))
+                client_file.write("{} [client {}] 서버에 연결되었습니다.\n".format(system_clock_formating, idx))
+                client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
                 client_file.write("{}\n".format(matrix))
-
-            elif recv_data.split()[0] == 'make_new_matrix':
-                idx = int(recv_data.split()[1])
+                client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
+                
+            elif type_name == 'make_new_matrix':
+                idx = int(idx)
                 matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
                 client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
                 client_file.write("{}\n".format(matrix))
+                client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
 
-            elif recv_data.split()[0] == 'round_pass':
+            elif type_name == 'round_pass':
                 print("라운드 하나 완료")
+                idx = int(idx)
+                client_file.write("{} [client {}] '라운드 {}' 완료.\n".format(system_clock_formating, idx, rnd))
                 result_matrix.append(cal_matrix)
                 cal_matrix = []
 
-            elif recv_data.split()[0] == 'round_over':
-                client_file.write("모든 라운드가 종료되었습니다\n")
+            elif type_name == 'round_over':
+                idx = int(idx)
+                client_file.write("{} [client {}] 모든 라운드가 실행되었습니다\n".format(system_clock_formating, idx))
                 
                 for i, mtx in zip(range(1,3),result_matrix):
                     mtx = np.array(mtx)
-                    client_file.write("Round {} calculation\n {}\n".format(i, mtx.reshape(10,15)))
+                    client_file.write("Round {} calculation\n {}\n".format(i, mtx.reshape(15,10)))
                 done = 1
                 break
-
-
-            send_queue.put([recv_data])
+            else:
+                send_queue.put([recv_data])
         except:
             exit(0)
     send_queue.put("1")

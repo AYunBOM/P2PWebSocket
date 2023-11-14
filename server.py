@@ -147,9 +147,8 @@ def Send(group, send_queue):
                     print(matrix_counting)
 
                     if matrix_counting == 6:
-                        print(1)
                         server_file.write("{} [server] '라운드 {}' 완료\n".format(system_clock_formating, result_matrix_count))
-                        
+
                         for k, con in enumerate(group):
                             msg = "round_pass " + str(k+1) + " " + str(result_matrix_count) + " " + str(system_clock)
                             con.send(bytes(msg.encode()))
@@ -192,7 +191,7 @@ def Send(group, send_queue):
                             random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
                             
                             #나중에 티켓정보가 필요하기 때문에 메시지 주고받을때 계속해서 붙여줌
-                            add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
+                            add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket)) + " " + str(system_clock)
                             for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
                                 time.sleep(0.01)
                                 # 여기서 빈 공간(-1)을 좌표로 모아서 해당 클라이언트에게 보냄

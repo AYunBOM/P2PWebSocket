@@ -150,12 +150,12 @@ def Recv(client_sock, send_queue):
                 client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
             elif type_name == 'round_pass':
                 print("라운드 하나 완료")
-                client_file.write("{} [client {}] '라운드 {}' 완료.\n".format(system_clock_formating, idx, rnd))
+                client_file.write("{} [client {}] '라운드 {}' 완료\n".format(system_clock_formating, idx, rnd))
                 result_matrix.append(cal_matrix)
                 cal_matrix = []
 
             elif type_name == 'round_over':
-                client_file.write("{} [client {}] 모든 라운드가 실행되었습니다\n".format(system_clock_formating, idx))
+                client_file.write("{} [client {}] 모든 라운드가 실행되었습니다.\n".format(system_clock_formating, idx))
                 
                 for i, mtx in zip(range(1,3),result_matrix):
                     mtx = np.array(mtx)

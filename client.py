@@ -5,14 +5,18 @@ import numpy as np
 import time
 
 
-system_clock = 0  # 서버 0~600초 누적시간
-system_clock_formating = ""  # 누적시간 형태 변환할 문자열
-
 # 시간을 출력 형식에 맞게 변환
 def real_time(time):
-    minute = "{}".format(time // 60)
-    second = "{}".format(time % 60)
-    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
+    m = time // 60
+    h = m // 60
+    m = m % 60
+    s = time % 60
+
+
+    second = "{}".format(s)
+    minute = "{}".format(m)
+    hour = "{}".format(h)
+    result = "{}:{}:{}".format(hour.zfill(2), minute.zfill(2), second.zfill(2))
     # 예) 3초 => 00:03 / 100초 => 01:40
     return result
 
@@ -26,8 +30,10 @@ def Send(client_sock, send_queue):
                 break
 
             recv = send_queue.get()
-            print(recv)
-            thread_num, type_name, pair, etc = recv[0].split()
+
+            thread_num, type_name, pair, etc, system_clock = recv[0].split()
+
+            system_clock = int(system_clock)
 
             if type_name == 'matrix':
                 time.sleep(0.02)
@@ -36,13 +42,16 @@ def Send(client_sock, send_queue):
                 recv_client, recv_client_ticket, not_recv_client, not_recv_client_ticket = etc.split("|")
 
                 pair_mul = pair[0] * pair[1]
+                
+                system_clock += 1
+                system_clock_formating = real_time(system_clock)
 
                 if int(thread_num) == min(pair):
                     time.sleep(0.008)
                     #행렬의 가로
                     mtx = ",".join(map(str, matrix[int(random_dir)]))
                     msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " row " + str(random_dir) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket
-                    #system_clock += 1
+                    
                     client_file.write("{} [client {}] '행'의 정보를 전달합니다.\n".format(system_clock_formating, thread_num))
                     #print("가로 전달")
                     client_sock.send(bytes(msg.encode()))
@@ -50,8 +59,7 @@ def Send(client_sock, send_queue):
                     time.sleep(0.005)
                     #행렬의 세로
                     mtx = ",".join(map(str, matrix[:, int(random_dir)]))
-                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_dir) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket 
-                    #system_clock += 1
+                    msg = "matrix " + str(pair_mul) + " " + mtx + " " + str(recv_client) + " col " + str(random_dir) + " " + recv_client_ticket + "|" + not_recv_client + "|" + not_recv_client_ticket
                     client_file.write("{} [client {}] '열'의 정보를 전달합니다.\n".format(system_clock_formating, thread_num))
                     #print("세로 전달")
                     client_sock.send(bytes(msg.encode()))
@@ -71,12 +79,14 @@ def Send(client_sock, send_queue):
                 if rc == "row":
                     time.sleep(0.008)
                     data_row.append([pair_cal, rc_num, data]) # [2, 6, [1, 2, 3, 4, 5]] 데이터 저장
-                    #system_clock += 1
+                    system_clock += 1
+                    system_clock_formating = real_time(system_clock)
                     client_file.write("{} [client {}] '행'의 정보를 받았습니다.\n".format(system_clock_formating, thread_num, data))
                 else:
                     time.sleep(0.008)
                     data_col.append([pair_cal, rc_num, data]) # [2, 6, [1, 2, 3, 4, 5]] 데이터 저장
-                    #system_clock += 1
+                    system_clock += 1
+                    system_clock_formating = real_time(system_clock)
                     client_file.write("{} [client {}] '열'의 정보를 받았습니다.\n".format(system_clock_formating, thread_num, data))
                 if pair_check.count(pair_cal) == 2: # 가로 세로 행이 2개 다 들어왔으면
                     
@@ -98,10 +108,12 @@ def Send(client_sock, send_queue):
                     result = sum(x * y for x, y in zip(cal_row, cal_col))
                     msg = "cal_result " + str(pair_cal) + " " + str(result) + " " + thread_num + " " + str(cal_row_dir) + " " + str(cal_col_dir)+ " " + recv_client_ticket_t + "|" + not_recv_client_t + "|" + not_recv_client_ticket_t
                     pair_check = [x for x in pair_check if x != pair_cal]
-                    #system_clock += 1
+                    system_clock += 1
+                    system_clock_formating = real_time(system_clock)
                     client_file.write("{} [client {}] 연산합니다.\n".format(system_clock_formating, thread_num))
                     cal_matrix.append(result)
-                    #system_clock += 1
+                    system_clock += 1
+                    system_clock_formating = real_time(system_clock)
                     client_file.write("{} [client {}] 연산 결과를 전달합니다.\n".format(system_clock_formating, thread_num, result))
                     print("연산 전달")
                     client_sock.send(bytes(msg.encode()))
@@ -118,12 +130,13 @@ def Recv(client_sock, send_queue):
     while True:
         try:
             recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
-            type_name, idx, rnd = recv_data.split()[0], recv_data.split()[1], recv_data.split()[2]
-            
-            print(recv_data)
+            type_name, idx, rnd, system_clock = recv_data.split()[0], recv_data.split()[1], recv_data.split()[2], recv_data.split()[-1]
+
+            system_clock = int(system_clock)
+            system_clock_formating = real_time(system_clock)
+
             if type_name == 'first_connected':
-                idx = int(idx)
-                file_name = "client" + str(idx) + "_log.txt"
+                file_name = "client" + idx + "_log.txt"
                 client_file = open(file_name, "w", encoding="UTF-8")
                 client_file.write("{} [client {}] 서버에 연결되었습니다.\n".format(system_clock_formating, idx))
                 client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
@@ -131,7 +144,7 @@ def Recv(client_sock, send_queue):
                 client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
                 
             elif type_name == 'make_new_matrix':
-                idx = int(idx)
+                print(2)
                 matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
                 client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
                 client_file.write("{}\n".format(matrix))
@@ -139,13 +152,12 @@ def Recv(client_sock, send_queue):
 
             elif type_name == 'round_pass':
                 print("라운드 하나 완료")
-                idx = int(idx)
                 client_file.write("{} [client {}] '라운드 {}' 완료.\n".format(system_clock_formating, idx, rnd))
+                print(1)
                 result_matrix.append(cal_matrix)
                 cal_matrix = []
 
             elif type_name == 'round_over':
-                idx = int(idx)
                 client_file.write("{} [client {}] 모든 라운드가 실행되었습니다\n".format(system_clock_formating, idx))
                 
                 for i, mtx in zip(range(1,3),result_matrix):
@@ -166,14 +178,13 @@ if __name__ == '__main__':
     client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #TCP Socket
     Host = 'localhost' #통신할 대상의 IP 주소
     Port = 9000  #통신할 대상의 Port 주소
-    client_sock.connect((Host, Port)) #서버로 연결시도
-    system_clock_formating = real_time(system_clock)
-    
+    client_sock.connect((Host, Port)) #서버로 연결시도    
 
     print("서버 연결 완료")
     done = 0
     cal_matrix = []
     result_matrix = []
+
 
     matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
 

@@ -5,14 +5,18 @@ import numpy as np
 import random
 import time
 
-system_clock = 0  # 서버 0~600초 누적시간
-system_clock_formating = ""  # 누적시간 형태 변환할 문자열
 
 # 시간을 출력 형식에 맞게 변환
 def real_time(time):
-    minute = "{}".format(time // 60)
-    second = "{}".format(time % 60)
-    result = "{}:{}".format(minute.zfill(2), second.zfill(2))
+    m = time // 60
+    h = m // 60
+    m = m % 60
+    s = time % 60
+
+    second = "{}".format(s)
+    minute = "{}".format(m)
+    hour = "{}".format(h)
+    result = "{}:{}:{}".format(hour.zfill(2), minute.zfill(2), second.zfill(2))
     # 예) 3초 => 00:03 / 100초 => 01:40
     return result
 
@@ -44,7 +48,7 @@ def empty_check(idx, matrix):
 
 def Send(group, send_queue):
     global result_matrix_count, result_matrix, matrix, case, dic, c_list, system_clock_formating, system_clock
-    msg = "first_connected " + str(len(group)) + " " + str(result_matrix_count)
+    msg = "first_connected " + str(len(group)) + " " + str(result_matrix_count) + " " + str(system_clock)
     group[-1].send(bytes(msg.encode()))
 
     matrix_counting = 0
@@ -57,15 +61,21 @@ def Send(group, send_queue):
 
             type_name, pair_mul, data, recv_client_num, rc, rc_num, etc = recv[0].split()
             
+            system_clock = int(system_clock)
+
+            system_clock += 1
+
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
                 time.sleep(0.03)
+                system_clock_formating = real_time(system_clock)
                 if rc == "row":
                     server_file.write("{} [server] 클라이언트 {}에게 '행'의 정보를 전달합니다.\n".format(system_clock_formating, recv_client_num))
                 elif rc == "col":
-                    server_file.write("{} [server] 클라이언트 {}에게 '열'의 정보를 전달합니다.\n".format(system_clock_formating, recv_client_num))
+                    server_file.write("{} [server] 클라이언트 {}에게 '열'의 정보를 전달합니다.\n".format(system_clock_formating, recv_client_num))                    
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
-                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num + "|" + etc
+                msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num + "|" + etc + " " + str(system_clock)
                 recv_client.send(bytes(msg.encode())) #메시지 전송
+                system_clock += 1
 
             elif type_name == "cal_result":
                 time.sleep(0.02)
@@ -98,7 +108,8 @@ def Send(group, send_queue):
 
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
-                #system_clock += 1
+                system_clock += 1
+                system_clock_formating = real_time(system_clock)
                 server_file.write("{} [server] 연산 결과를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating, data, rc, rc_num ))
                 # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
                 
@@ -125,7 +136,7 @@ def Send(group, send_queue):
                     random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
                     add_msg = ' matrix ' + ','.join(map(str, case[idx])) + " " + str(recv_client_t) + "|" + str_recv_client_ticket + "|" + str(not_recv_client) + "|" + str_not_recv_client_ticket
                     for j, m in zip(case[idx], random_mat): # 메시지 전송
-                        msg = str(j) + "=" + str(m) + " " + add_msg
+                        msg = str(j) + "=" + str(m) + " " + add_msg + " " + str(system_clock)
                         group[j-1].send(bytes(msg.encode())) #group에는 들어온 클라이언트가 하나씩 순서대로 쌓여있기때문에 인덱스로 골라서 send
                         msg = add_msg
                 
@@ -137,17 +148,17 @@ def Send(group, send_queue):
                     if matrix_counting == 6:
                         server_file.write("{} [server] '라운드 {}' 완료\n".format(system_clock_formating, result_matrix_count))
                         
-                        msg = "round_pass " + str(recv_client_num) + " " + str(result_matrix_count)
-                        for con in group:
+                        for k, con in enumerate(group):
+                            msg = "round_pass " + str(k+1) + " " + str(result_matrix_count) + " " + str(system_clock)
                             con.send(bytes(msg.encode()))
 
                         result_matrix_count += 1
                         result_matrix.append(matrix)
 
-                        if result_matrix_count == 2:
+                        if result_matrix_count == 3:
                             print(result_matrix)
-                            msg = "round_over " + str(recv_client_num) + " " + str(result_matrix_count)
-                            for con in group:
+                            for k, con in enumerate(group):
+                                msg = "round_over " + str(k+1) + " " + str(result_matrix_count) + " " + str(system_clock)
                                 con.send(bytes(msg.encode()))
 
                             print("100번 연산 완료")
@@ -160,10 +171,11 @@ def Send(group, send_queue):
                             break
 
                         server_file.write("{} [server] '라운드 {}' 시작\n".format(system_clock_formating, result_matrix_count))
-                        msg_t = "make_new_matrix " + str(recv_client_num) + " " + str(result_matrix_count)
                         for k, con in enumerate(group):
-                            msg = msg_t + str(k)
+                            msg = "make_new_matrix " + str(k+1) + " " + str(result_matrix_count) + " " + str(system_clock)
                             con.send(bytes(msg.encode()))
+                            
+                            #con.send(bytes(msg.encode()))
 
                         matrix = np.full((6, 10, 10), -1)
                         matrix_counting = 0
@@ -191,7 +203,7 @@ def Send(group, send_queue):
         except:
             pass
 
-    if result_matrix_count == 2:
+    if result_matrix_count == 3:
         server_sock.close()
         
 
@@ -201,7 +213,7 @@ def Send(group, send_queue):
 #- 연산결과 받기
 
 def Recv(conn, count, send_queue, group):
-    global case, dic, c_list, result_matrix_count
+    global case, dic, c_list, result_matrix_count, system_clock_formating, system_clock
 
     matrix = np.full((6, 10, 10), -1)
     
@@ -219,17 +231,17 @@ def Recv(conn, count, send_queue, group):
             random_mat = empty_check(idx, matrix) # 랜덤 빈 좌표
             
             #나중에 티켓정보가 필요하기 때문에 메시지 주고받을때 계속해서 붙여줌
-            add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket))
+            add_msg = ' matrix ' + ','.join(map(str, i)) + " " + str(recv_client) + "|" + ','.join(map(str, recv_client_ticket)) + "|" + str(not_recv_client) + "|" + ','.join(map(str, not_recv_client_ticket)) 
             for j, m in zip(i, random_mat): # 메시지 전송 (클라이언트 번호, 좌표)
                 time.sleep(0.01)
-                msg = str(j) + "=" + str(m) + add_msg # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
+                msg = str(j) + "=" + str(m) + add_msg + " " + str(system_clock) # 클라이언트 번호, 좌표 (차례대로 행, 열 보내짐) + 위에 만든 메시지
                 group[j-1].send(bytes(msg.encode())) #클라이언트에게 행/열 전송 요청
                 msg = add_msg
 
 
     while True:
         
-        if result_matrix_count == 2: 
+        if result_matrix_count == 3: 
             break
 
         data = conn.recv(1024).decode()
@@ -253,6 +265,7 @@ if __name__ == '__main__':
     dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}
     matrix = np.full((6, 10, 10), -1)
 
+    system_clock = 0
     system_clock_formating = real_time(system_clock)
 
     server_file = open("server_log.txt", "w", encoding="UTF-8")
@@ -270,7 +283,7 @@ if __name__ == '__main__':
             group.append(conn) #연결된 클라이언트의 소켓정보
             print('Connected ' + str(addr))
 
-            server_file.write("{} [server] '클라이언트' (이)가 접속하였습니다.\n".format(system_clock_formating))
+            server_file.write("{} [server] '클라이언트 {}' (이)가 접속하였습니다.\n".format(system_clock_formating, len(group)))
 
             #소켓에 연결된 모든 클라이언트에게 동일한 메시지를 보내기 위한 쓰레드(브로드캐스트)
             #연결된 클라이언트가 1명 이상일 경우 변경된 group 리스트로 반영

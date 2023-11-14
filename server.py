@@ -60,11 +60,9 @@ def Send(group, send_queue):
             if type_name == "matrix": # 클라이언트에게 행렬을 받아왔다면
                 time.sleep(0.03)
                 if rc == "row":
-                    server_file.write("{} [server] '클라이언트 {}' 에게 '행'의 정보를 전달받았습니다.\n".format(system_clock_formating, recv_client_num))
-                    server_file.write("> 행 정보 [{}]\n".format(data))
+                    server_file.write("{} [server] 클라이언트 {}에게 '행'의 정보를 전달받았습니다.\n".format(system_clock_formating, recv_client_num))
                 elif rc == "col":
-                    server_file.write("{} [server] '클라이언트 {}' 에게 '열'의 정보를 전달받았습니다.\n".format(system_clock_formating, recv_client_num))
-                    server_file.write("> 열 정보 [{}]\n".format(data))
+                    server_file.write("{} [server] 클라이언트 {}에게 '열'의 정보를 전달받았습니다.\n".format(system_clock_formating, recv_client_num))
                 recv_client = group[int(recv_client_num)-1] # 연산을 해야하는 클라이언트에게 메시지 전송
                 msg = recv_client_num + " calculating " + pair_mul + " " + data + "|" + rc + "|" + rc_num + "|" + etc
                 recv_client.send(bytes(msg.encode())) #메시지 전송
@@ -101,7 +99,7 @@ def Send(group, send_queue):
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 #system_clock += 1
-                server_file.write("{} [server] 연산 결과 '{}'(을)를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating, data, rc, rc_num ))
+                server_file.write("{} [server] 연산 결과를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating, data, rc, rc_num ))
                 # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
                 
                 complete = 1
@@ -137,10 +135,6 @@ def Send(group, send_queue):
                     print(matrix_counting)
 
                     if matrix_counting == 6:
-                        print(matrix_counting)
-                        for i,m in zip(range(1,7), matrix):
-                            print("Round {} Matrix {}\n".format(result_matrix_count, i))
-                            print(*matrix, sep="\n")
                         server_file.write("{} [server] '라운드 {}' 의 연산이 완료되었습니다.\n".format(system_clock_formating, result_matrix_count))
                         
                         msg = "round_pass "
@@ -155,7 +149,7 @@ def Send(group, send_queue):
                             msg = "round_over "
                             for con in group:
                                 con.send(bytes(msg.encode()))
-                            #server_sock.close()
+
                             print("100번 연산 완료")
                             print("접속 종료")
                             server_file.write("{} [server] 모든 라운드를 실행하였습니다.\n".format(system_clock_formating))

@@ -101,7 +101,7 @@ def Send(group, send_queue):
                 idx = dic[pair_mul]
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 #system_clock += 1
-                server_file.write("{} [server] 연산 결과 '{}'(을)를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating,recv_client_num, data, rc, rc_num ))
+                server_file.write("{} [server] 연산 결과 '{}'(을)를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating, data, rc, rc_num ))
                 # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
                 
                 complete = 1
@@ -142,12 +142,17 @@ def Send(group, send_queue):
                             print("Round {} Matrix {}\n".format(result_matrix_count, i))
                             print(*matrix, sep="\n")
                         server_file.write("{} [server] '라운드 {}' 의 연산이 완료되었습니다.\n".format(system_clock_formating, result_matrix_count))
+                        
+                        msg = "round_pass "
+                        for con in group:
+                            con.send(bytes(msg.encode()))
+
                         result_matrix_count += 1
                         result_matrix.append(matrix)
 
                         if result_matrix_count == 3:
                             print(result_matrix)
-                            msg = "round_over"
+                            msg = "round_over "
                             for con in group:
                                 con.send(bytes(msg.encode()))
                             #server_sock.close()
@@ -158,7 +163,6 @@ def Send(group, send_queue):
                                 for j, m in zip(range(1,7),mtx):
                                     server_file.write("Round {} matrix {}\n {}\n".format(i, j, m))
                             break
-                        #print(matrix)
 
                         server_file.write("{} [server] '라운드 {}' 의 연산을 시작합니다.\n".format(system_clock_formating, result_matrix_count))
                         msg_t = "make_new_matrix "
@@ -166,8 +170,6 @@ def Send(group, send_queue):
                             msg = msg_t + str(k)
                             con.send(bytes(msg.encode()))
 
-                        for con in group:
-                            con.send(bytes(msg.encode()))
                         matrix = np.full((6, 10, 10), -1)
                         matrix_counting = 0
                         for i in case: # 클라이언트에게 행렬을 달라고 알리는 메시지 전송

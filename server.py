@@ -141,10 +141,7 @@ def Send(group, send_queue):
                         msg = add_msg
                 
                 else:
-                    print("행렬 하나 완성")
                     matrix_counting += 1
-
-                    print(matrix_counting)
 
                     if matrix_counting == 6:
                         server_file.write("{} [server] '라운드 {}' 완료\n".format(system_clock_formating, result_matrix_count))
@@ -155,20 +152,20 @@ def Send(group, send_queue):
 
                         result_matrix_count += 1
                         result_matrix.append(matrix)
+                        result_time.append(system_clock-result_time[-1])
 
                         if result_matrix_count == 3:
-                            print(result_matrix)
                             for k, con in enumerate(group):
                                 msg = "round_over " + str(k+1) + " " + str(result_matrix_count) + " " + str(system_clock)
                                 con.send(bytes(msg.encode()))
-
-                            print("100번 연산 완료")
                             print("접속 종료")
                             server_file.write("{} [server] 모든 라운드를 실행하였습니다.\n".format(system_clock_formating))
-                            for i,mtx in zip(range(1,3),result_matrix):
+                            for i,mtx,t in zip(range(1,3),result_matrix, result_time[1:]):
                                 for j, m in zip(range(1,7),mtx):
+                                    print("Round {} matrix {}\n {}\n".format(i, j, m))
                                     server_file.write("Round {} matrix {}\n {}\n".format(i, j, m))
-                                server_file.write("\n")
+                                print("소요시간 : {} sec\n\n".format(t))
+                                server_file.write("소요시간 : {} sec\n\n".format(t))
                             break
 
                         server_file.write("{} [server] '라운드 {}' 시작\n".format(system_clock_formating, result_matrix_count))
@@ -259,7 +256,7 @@ if __name__ == '__main__':
     server_sock.bind((HOST, PORT))  # 소켓에 수신받을 IP주소와 PORT를 설정
     server_sock.listen(5)  # 소켓 연결, 여기서 파라미터는 접속수를 의미
     count, result_matrix_count = 0, 1
-    group, result_matrix = [], [] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
+    group, result_matrix, result_time = [], [], [0] #연결된 클라이언트의 소켓정보를 리스트로 묶기 위함
     case = [[1,2], [1,3], [1,4], [2,3], [2,4], [3,4]]
     c_list = [1, 2, 3, 4]
     dic = {'2': 0, '3': 1, '4': 2, '6': 3, '8': 4, '12': 5}

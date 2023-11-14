@@ -21,7 +21,7 @@ def real_time(time):
     return result
 
 def Send(client_sock, send_queue):
-    global pair_check, data_row, data_col, done, result_matrix, cal_matrix
+    global pair_check, data_row, data_col, done, result_calculation, cal_matrix
     
     while True:
         try:
@@ -126,7 +126,7 @@ def Send(client_sock, send_queue):
 #- 행렬을 받음
 
 def Recv(client_sock, send_queue):
-    global client_file, matrix, done, system_clock, system_clock_formating, cal_matrix, result_matrix
+    global client_file, matrix, done, system_clock, system_clock_formating, cal_matrix, result_calculation
     while True:
         try:
             recv_data = client_sock.recv(1024).decode()  # Server -> Client 데이터 수신
@@ -140,26 +140,27 @@ def Recv(client_sock, send_queue):
                 client_file = open(file_name, "w", encoding="UTF-8")
                 client_file.write("{} [client {}] 서버에 연결되었습니다.\n".format(system_clock_formating, idx))
                 client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
-                client_file.write("{}\n".format(matrix))
+                result_martix.append(matrix)
                 client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
                 
             elif type_name == 'make_new_matrix':
                 matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
                 client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
-                client_file.write("{}\n".format(matrix))
+                result_martix.append(matrix)
                 client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
             elif type_name == 'round_pass':
                 print("라운드 하나 완료")
                 client_file.write("{} [client {}] '라운드 {}' 완료\n".format(system_clock_formating, idx, rnd))
-                result_matrix.append(cal_matrix)
+                result_calculation.append(cal_matrix)
                 cal_matrix = []
 
             elif type_name == 'round_over':
                 client_file.write("{} [client {}] 모든 라운드가 실행되었습니다.\n".format(system_clock_formating, idx))
                 
-                for i, mtx in zip(range(1,3),result_matrix):
-                    mtx = np.array(mtx)
-                    client_file.write("Round {} calculation\n {}\n".format(i, mtx.reshape(15,10)))
+                for i, m, c in zip(range(1,3), result_martix, result_calculation):
+                    c = np.array(c)
+                    print("Round {}\n matrix\n {}\n calculation\n {}\n\n".format(i, m, c.reshape(15,10)))
+                    client_file.write("Round {}\n matrix\n {}\n calculation\n {}\n\n".format(i, m, c.reshape(15,10)))
                 done = 1
                 break
             else:
@@ -179,8 +180,7 @@ if __name__ == '__main__':
 
     print("서버 연결 완료")
     done = 0
-    cal_matrix = []
-    result_matrix = []
+    cal_matrix, result_calculation, result_martix = [], [], [] #cal_matrix는 라운드별 연산을 저장해서 result_calculation에 append 해주는 리스트
 
 
     matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 

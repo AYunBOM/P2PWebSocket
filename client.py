@@ -81,13 +81,13 @@ def Send(client_sock, send_queue):
                     data_row.append([pair_cal, rc_num, data]) # [2, 6, [1, 2, 3, 4, 5]] 데이터 저장
                     system_clock += 1
                     system_clock_formating = real_time(system_clock)
-                    client_file.write("{} [client {}] '행'의 정보를 받았습니다.\n".format(system_clock_formating, thread_num, data))
+                    client_file.write("{} [client {}] '행'의 정보를 받았습니다.\n".format(system_clock_formating, thread_num))
                 else:
                     time.sleep(0.008)
                     data_col.append([pair_cal, rc_num, data]) # [2, 6, [1, 2, 3, 4, 5]] 데이터 저장
                     system_clock += 1
                     system_clock_formating = real_time(system_clock)
-                    client_file.write("{} [client {}] '열'의 정보를 받았습니다.\n".format(system_clock_formating, thread_num, data))
+                    client_file.write("{} [client {}] '열'의 정보를 받았습니다.\n".format(system_clock_formating, thread_num))
                 if pair_check.count(pair_cal) == 2: # 가로 세로 행이 2개 다 들어왔으면
                     
                     x, y = 0, 0 # pop할 위치 정할 변수들
@@ -114,7 +114,7 @@ def Send(client_sock, send_queue):
                     cal_matrix.append(result)
                     system_clock += 1
                     system_clock_formating = real_time(system_clock)
-                    client_file.write("{} [client {}] 연산 결과를 전달합니다.\n".format(system_clock_formating, thread_num, result))
+                    client_file.write("{} [client {}] 연산 결과를 전달합니다.\n".format(system_clock_formating, thread_num))
                     print("연산 전달")
                     client_sock.send(bytes(msg.encode()))
         except:
@@ -144,16 +144,13 @@ def Recv(client_sock, send_queue):
                 client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
                 
             elif type_name == 'make_new_matrix':
-                print(2)
                 matrix = np.random.randint(0, 101, (10, 10)) # 10X10 행렬 만들기 
                 client_file.write("{} [client {}] 10X10 행렬을 생성합니다.\n".format(system_clock_formating, idx))
                 client_file.write("{}\n".format(matrix))
                 client_file.write("{} [client {}] '라운드 {}' 시작\n".format(system_clock_formating, idx, rnd))
-
             elif type_name == 'round_pass':
                 print("라운드 하나 완료")
                 client_file.write("{} [client {}] '라운드 {}' 완료.\n".format(system_clock_formating, idx, rnd))
-                print(1)
                 result_matrix.append(cal_matrix)
                 cal_matrix = []
 

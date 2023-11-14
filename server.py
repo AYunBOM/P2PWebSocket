@@ -110,7 +110,7 @@ def Send(group, send_queue):
                 matrix[idx][int(rc)][int(rc_num)] = int(data) # idx: case 인덱스, rc: 행, rc_num:열
                 system_clock += 1
                 system_clock_formating = real_time(system_clock)
-                server_file.write("{} [server] 연산 결과를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating, data, rc, rc_num ))
+                server_file.write("{} [server] 연산 결과를 해당 행렬의 [{},{}] 에 저장합니다.\n".format(system_clock_formating, rc, rc_num ))
                 # 실행시켜보면 티켓의 수가 둘다 0이 되면 끝남. 즉 100번 실행하면 끝난다는 소리
                 
                 complete = 1
@@ -143,9 +143,11 @@ def Send(group, send_queue):
                 else:
                     print("행렬 하나 완성")
                     matrix_counting += 1
+
                     print(matrix_counting)
 
                     if matrix_counting == 6:
+                        print(1)
                         server_file.write("{} [server] '라운드 {}' 완료\n".format(system_clock_formating, result_matrix_count))
                         
                         for k, con in enumerate(group):
@@ -174,8 +176,7 @@ def Send(group, send_queue):
                         for k, con in enumerate(group):
                             msg = "make_new_matrix " + str(k+1) + " " + str(result_matrix_count) + " " + str(system_clock)
                             con.send(bytes(msg.encode()))
-                            
-                            #con.send(bytes(msg.encode()))
+
 
                         matrix = np.full((6, 10, 10), -1)
                         matrix_counting = 0
